@@ -102,9 +102,13 @@ void UIManager::update() {
                 IInput::instance().setBacklight(0);
             }
             _dimmed = true;
-            // Auto-lock on dim — fallback chain: pin → key → none
+            // Auto-lock on dim — fallback chain: pin → key → none.
+            // Skip when on the setup screen so a missing-SD device doesn't
+            // lock itself before the user can recover it.
             const auto& sec = cfg.security;
-            if (sec.autoLock == "pin" && sec.lockMode == "pin" && sec.pinCode.length() >= 4 && !_isLocked) {
+            if (_inSetupMode) {
+                // dim only
+            } else if (sec.autoLock == "pin" && sec.lockMode == "pin" && sec.pinCode.length() >= 4 && !_isLocked) {
                 showPinLock();
             } else if (sec.autoLock == "pin" && sec.lockMode == "key" && !_isLocked && !_keyLocked) {
                 // Fallback: PIN auto-lock requested but only key lock available
@@ -764,6 +768,8 @@ void UIManager::handleRetry(const ConvoId& id, const String& text, uint32_t oldP
 }
 
 void UIManager::showSetupScreen(SetupReason reason) {
+    _inSetupMode = true;
+
     // Hide all normal screens
     _convoList.hide();
     _chatScreen.hide();

@@ -17,6 +17,11 @@
 #include "i18n/I18n.h"
 #include "storage/TelemetryCache.h"
 #include "util/TimeHelper.h"
+#ifdef PLATFORM_TWATCH
+#include <Wire.h>
+#include "hal/twatch/Expander.h"
+#include "hal/twatch/Pmu.h"
+#endif
 
 using namespace mclite;
 
@@ -34,8 +39,16 @@ void setup() {
     pinMode(TDECK_POWER_EN, OUTPUT);
     digitalWrite(TDECK_POWER_EN, HIGH);
     delay(100);
+#elif defined(PLATFORM_TWATCH)
+    // I2C first — XL9555 + AXP2101 both live on the shared I2C bus.
+    Wire.begin(TWATCH_I2C_SDA, TWATCH_I2C_SCL, 400000);
+    delay(10);
+    // Expander gates display power and the LoRa antenna RF switch.
+    Expander::instance().init();
+    // PMU enables ALDO2 (display rail) before LovyanGFX talks to the panel.
+    Pmu::instance().init();
+    delay(10);
 #endif
-    // T-Watch power-on sequence (I2C, XL9555 expander, AXP2101 PMU) arrives in Phase 3d
 
     // 1. Display + LVGL (configures SPI bus via LovyanGFX)
     Serial.println("[Boot] Display...");
@@ -83,6 +96,14 @@ void setup() {
     }
 
     // 5. Input devices
+#ifdef PLATFORM_TWATCH
+    // Touch reset AFTER display init — panel reset noise glitches the
+    // touch controller if done before. Timing per LilyGoWatchUltra.cpp.
+    Expander::instance().writePin(TWATCH_EXP_TOUCH_RST, LOW);
+    delay(20);
+    Expander::instance().writePin(TWATCH_EXP_TOUCH_RST, HIGH);
+    delay(60);
+#endif
     IInput::instance().init();
 
     // 6. GPS
@@ -122,6 +143,11 @@ void setup() {
     } else {
         // Normal boot — init mesh (loads contacts/channels + radio)
         Display::instance().setBootStatus("Radio...");
+#ifdef PLATFORM_TWATCH
+        // LoRa antenna switch must be HIGH before any radio TX, otherwise
+        // the SX1262 is disconnected from the antenna.
+        Expander::instance().writePin(TWATCH_EXP_LORA_RF_SW, HIGH);
+#endif
         MeshManager::instance().init();
         setupMeshCallbacks();
 

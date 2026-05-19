@@ -167,6 +167,11 @@ private:
     void showKeyLockOverlay();
     void hideKeyLockOverlay();
 
+    // Setup screen (NO_SD / NO_CONFIG / CONFIG_ERROR) takes over the display.
+    // Auto-dim still applies (battery save), but auto-lock is suppressed —
+    // user needs to recover the device, not be locked out.
+    bool       _inSetupMode = false;
+
     // Modal input group — isolates trackball/keyboard to modal while open
     lv_group_t* _modalGroup = nullptr;
 

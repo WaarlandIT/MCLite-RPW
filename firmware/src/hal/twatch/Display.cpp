@@ -18,7 +18,7 @@ public:
         auto busConfig = _bus.config();
         busConfig.spi_host   = SPI3_HOST;
         busConfig.spi_mode   = 0;
-        busConfig.freq_write = 80000000;
+        busConfig.freq_write = 40000000;  // 80 MHz produced flickering color bars
         busConfig.freq_read  = 16000000;
         busConfig.pin_sclk   = TWATCH_DISP_SCK;
         busConfig.pin_io0    = TWATCH_DISP_D0;
@@ -31,11 +31,24 @@ public:
         _panel.setBus(&_bus);
 
         auto panelConfig = _panel.config();
-        panelConfig.pin_cs   = TWATCH_DISP_CS;
-        panelConfig.pin_rst  = TWATCH_DISP_RST;
-        panelConfig.pin_busy = -1;
-        // Panel_CO5300's constructor sets native 502 (memory_width) x 410
-        // (memory_height). setRotation(1) below presents 410W x 502H portrait.
+        panelConfig.pin_cs       = TWATCH_DISP_CS;
+        panelConfig.pin_rst      = TWATCH_DISP_RST;
+        // CO5300 init cmd 0x35 0x00 enables TE-on-V-sync output (GPIO 6).
+        // Wire it as the "busy" pin so LovyanGFX waits for vertical blank
+        // before each transfer — eliminates the colored-bar tearing artifacts.
+        panelConfig.pin_busy     = TWATCH_DISP_TE;
+        // CO5300 is wired portrait-native: the panel init sequence addresses a
+        // 410-column x 502-row area (column range 22..431). Override LovyanGFX's
+        // landscape-oriented defaults so setRotation(0) presents that area as-is.
+        // offset_x=22 accounts for the panel's 22-column hidden left margin —
+        // without it, the rightmost 22 columns aren't written and show as
+        // uninitialized panel memory.
+        panelConfig.memory_width  = 410;
+        panelConfig.memory_height = 502;
+        panelConfig.panel_width   = 410;
+        panelConfig.panel_height  = 502;
+        panelConfig.offset_x      = 22;
+        panelConfig.offset_y      = 0;
         _panel.config(panelConfig);
         setPanel(&_panel);
     }
@@ -58,20 +71,21 @@ bool Display::init() {
     _lgfx_dev = &lgfx;
 
     _lgfx_dev->init();
-    _lgfx_dev->setRotation(1);  // Portrait (410W x 502H worn orientation)
+    _lgfx_dev->setRotation(0);  // Panel is natively 410W x 502H portrait
     setBrightness(180);
 
     lv_init();
 
-    // Allocate draw buffers in PSRAM (double-buffered)
+    // Allocate single draw buffer in PSRAM. The CO5300 + QSPI doesn't tolerate
+    // LVGL's double-buffer flush overlap cleanly — buffers can be flushed mid-
+    // update on the panel, producing colored-bar flicker at the partial-flush
+    // boundaries. Single-buffer serialises the writes; slower but stable.
     const size_t bufSize = Display::width() * 40;  // 40 rows at a time
     _buf1 = (lv_color_t*)ps_malloc(bufSize * sizeof(lv_color_t));
-    _buf2 = (lv_color_t*)ps_malloc(bufSize * sizeof(lv_color_t));
-    if (!_buf1 || !_buf2) {
-        Serial.println("[Display] PSRAM alloc failed, falling back to RAM");
-        free(_buf1);
+    _buf2 = nullptr;
+    if (!_buf1) {
+        Serial.println("[Display] PSRAM alloc failed, falling back to DRAM");
         _buf1 = (lv_color_t*)malloc(bufSize * sizeof(lv_color_t));
-        _buf2 = nullptr;
     }
     if (!_buf1) {
         Serial.println("[Display] Draw buffer allocation failed");
