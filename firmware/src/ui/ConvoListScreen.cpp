@@ -12,7 +12,8 @@ namespace mclite {
 
 void ConvoListScreen::create(lv_obj_t* parent) {
     _screen = lv_obj_create(parent);
-    lv_obj_set_size(_screen, Display::width(), Display::height() - theme::STATUS_BAR_HEIGHT);
+    lv_obj_set_size(_screen, Display::width(),
+                    Display::height() - theme::SAFE_AREA_TOP - theme::STATUS_BAR_HEIGHT);
     lv_obj_align(_screen, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_style_bg_color(_screen, theme::BG_PRIMARY, 0);
     lv_obj_set_style_bg_opa(_screen, LV_OPA_COVER, 0);
@@ -23,7 +24,9 @@ void ConvoListScreen::create(lv_obj_t* parent) {
 
     // Scrollable list container
     _list = lv_obj_create(_screen);
-    lv_obj_set_size(_list, Display::width(), Display::height() - theme::STATUS_BAR_HEIGHT);
+    lv_obj_set_size(_list, theme::CONTENT_WIDTH,
+                    Display::height() - theme::SAFE_AREA_TOP - theme::STATUS_BAR_HEIGHT
+                    - theme::SAFE_AREA_BOTTOM);
     lv_obj_align(_list, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_opa(_list, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(_list, 0, 0);
@@ -105,7 +108,7 @@ void ConvoListScreen::refresh() {
 
 void ConvoListScreen::addConvoRow(Conversation* convo) {
     lv_obj_t* row = lv_obj_create(_list);
-    lv_obj_set_size(row, 316, theme::CONVO_ROW_HEIGHT);
+    lv_obj_set_size(row, theme::CONTENT_WIDTH - theme::PAD_SMALL, theme::CONVO_ROW_HEIGHT);
     lv_obj_set_style_bg_color(row, theme::BG_SECONDARY, 0);
     lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(row, 0, 0);

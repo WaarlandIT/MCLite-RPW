@@ -16,7 +16,8 @@ struct RetryData { String text; uint32_t packetId; };
 
 void ChatScreen::create(lv_obj_t* parent) {
     _screen = lv_obj_create(parent);
-    lv_obj_set_size(_screen, Display::width(), Display::height() - theme::STATUS_BAR_HEIGHT);
+    lv_obj_set_size(_screen, Display::width(),
+                    Display::height() - theme::SAFE_AREA_TOP - theme::STATUS_BAR_HEIGHT);
     lv_obj_align(_screen, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_style_bg_color(_screen, theme::BG_PRIMARY, 0);
     lv_obj_set_style_bg_opa(_screen, LV_OPA_COVER, 0);
@@ -41,6 +42,8 @@ void ChatScreen::createHeader() {
     lv_obj_set_style_border_width(_header, 0, 0);
     lv_obj_set_style_radius(_header, 0, 0);
     lv_obj_set_style_pad_all(_header, theme::PAD_SMALL, 0);
+    // Inner horizontal padding — full-width bg, content inset from edges.
+    lv_obj_set_style_pad_hor(_header, theme::CHAT_HEADER_PAD_HOR, 0);
     lv_obj_clear_flag(_header, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(_header, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(_header, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -77,9 +80,10 @@ void ChatScreen::createHeader() {
 
 void ChatScreen::createChatArea() {
     _chatArea = lv_obj_create(_screen);
-    lv_obj_set_size(_chatArea, Display::width(),
-                    Display::height() - theme::STATUS_BAR_HEIGHT
-                    - theme::CHAT_HEADER_HEIGHT - theme::CHAT_INPUT_HEIGHT);
+    lv_obj_set_size(_chatArea, theme::CONTENT_WIDTH,
+                    Display::height() - theme::SAFE_AREA_TOP - theme::STATUS_BAR_HEIGHT
+                    - theme::CHAT_HEADER_HEIGHT - theme::CHAT_INPUT_HEIGHT
+                    - theme::SAFE_AREA_BOTTOM);
     lv_obj_align(_chatArea, LV_ALIGN_TOP_MID, 0, theme::CHAT_HEADER_HEIGHT);
     lv_obj_set_style_bg_opa(_chatArea, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(_chatArea, 0, 0);
@@ -93,12 +97,14 @@ void ChatScreen::createChatArea() {
 void ChatScreen::createInputBar() {
     _inputBar = lv_obj_create(_screen);
     lv_obj_set_size(_inputBar, Display::width(), theme::CHAT_INPUT_HEIGHT);
-    lv_obj_align(_inputBar, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(_inputBar, LV_ALIGN_BOTTOM_MID, 0, -theme::SAFE_AREA_BOTTOM);
     lv_obj_set_style_bg_color(_inputBar, theme::BG_INPUT, 0);
     lv_obj_set_style_bg_opa(_inputBar, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(_inputBar, 0, 0);
     lv_obj_set_style_radius(_inputBar, 0, 0);
     lv_obj_set_style_pad_all(_inputBar, theme::PAD_SMALL, 0);
+    // Inner horizontal padding — full-width bg, content inset from edges.
+    lv_obj_set_style_pad_hor(_inputBar, theme::INPUT_BAR_PAD_HOR, 0);
     lv_obj_clear_flag(_inputBar, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(_inputBar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(_inputBar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
@@ -183,10 +189,10 @@ void ChatScreen::open(const ConvoId& id) {
     if (ro) {
         lv_obj_add_flag(_inputBar, LV_OBJ_FLAG_HIDDEN);
         // Expand chat area to fill the space
-        lv_obj_set_height(_chatArea, Display::height() - theme::STATUS_BAR_HEIGHT - theme::CHAT_HEADER_HEIGHT);
+        lv_obj_set_height(_chatArea, Display::height() - theme::SAFE_AREA_TOP - theme::STATUS_BAR_HEIGHT - theme::CHAT_HEADER_HEIGHT - theme::SAFE_AREA_BOTTOM);
     } else {
         lv_obj_clear_flag(_inputBar, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_set_height(_chatArea, Display::height() - theme::STATUS_BAR_HEIGHT - theme::CHAT_HEADER_HEIGHT - theme::CHAT_INPUT_HEIGHT);
+        lv_obj_set_height(_chatArea, Display::height() - theme::SAFE_AREA_TOP - theme::STATUS_BAR_HEIGHT - theme::CHAT_HEADER_HEIGHT - theme::CHAT_INPUT_HEIGHT - theme::SAFE_AREA_BOTTOM);
     }
 
     // Mark as read
@@ -231,7 +237,7 @@ void ChatScreen::refresh() {
 void ChatScreen::addBubble(const Message& msg) {
     // Container for alignment
     lv_obj_t* row = lv_obj_create(_chatArea);
-    lv_obj_set_width(row, Display::width() - 12);
+    lv_obj_set_width(row, theme::CONTENT_WIDTH - 12);
     lv_obj_set_height(row, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(row, 0, 0);
@@ -557,9 +563,10 @@ void ChatScreen::showCannedPicker() {
     if (count == 0) return;
     labels[count] = "";  // sentinel
 
-    // Dark overlay
+    // Dark overlay — matches _screen's dimensions exactly
     _cannedOverlay = lv_obj_create(_screen);
-    lv_obj_set_size(_cannedOverlay, Display::width(), Display::height() - theme::STATUS_BAR_HEIGHT);
+    lv_obj_set_size(_cannedOverlay, Display::width(),
+                    Display::height() - theme::SAFE_AREA_TOP - theme::STATUS_BAR_HEIGHT);
     lv_obj_set_pos(_cannedOverlay, 0, 0);
     lv_obj_set_style_bg_color(_cannedOverlay, lv_color_black(), 0);
     lv_obj_set_style_bg_opa(_cannedOverlay, LV_OPA_50, 0);

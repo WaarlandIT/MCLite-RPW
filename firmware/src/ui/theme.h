@@ -42,34 +42,85 @@ constexpr int PAD_SMALL   = 4;
 constexpr int PAD_MEDIUM  = 8;
 constexpr int PAD_LARGE   = 12;
 
-// Safe-area insets for displays with rounded bezel corners. 0 on T-Deck (rect
-// LCD); will diverge for T-Watch in a follow-up sub-step.
+// Safe-area insets for displays with rounded bezel corners. T-Deck's rect LCD
+// uses 0; T-Watch's AMOLED clips into the panel at each rounded corner —
+// vertical clipping is more aggressive than horizontal.
+#ifdef PLATFORM_TWATCH
+constexpr int SAFE_AREA_TOP    = 24;
+constexpr int SAFE_AREA_BOTTOM = 24;
+constexpr int SAFE_AREA_LEFT   = 20;
+constexpr int SAFE_AREA_RIGHT  = 20;
+#else
 constexpr int SAFE_AREA_TOP    = 0;
 constexpr int SAFE_AREA_BOTTOM = 0;
 constexpr int SAFE_AREA_LEFT   = 0;
 constexpr int SAFE_AREA_RIGHT  = 0;
+#endif
 
-// Status bar
+// Width of the content area after horizontal safe-area insets. Equals the full
+// display width on T-Deck; 32px narrower on T-Watch. Use this (centered) for
+// any content-bearing widget (status bar, chat header/input bar, list rows).
+// Full-screen backgrounds can stay at Display::width() — the rounded corners
+// just clip the background fill.
+constexpr int CONTENT_WIDTH = BOARD_DISP_W - SAFE_AREA_LEFT - SAFE_AREA_RIGHT;
+
+// Status bar — taller on T-Watch to fit the bigger touch fonts.
+#ifdef PLATFORM_TWATCH
+constexpr int STATUS_BAR_HEIGHT = 32;
+#else
 constexpr int STATUS_BAR_HEIGHT = 24;
+#endif
 
-// Chat header / input bar heights. Will diverge for T-Watch (touch finger
-// targets are larger than trackball clicks).
+// Inner horizontal padding for full-width bars (status bar, chat header, chat
+// input bar). On T-Deck these stay at PAD_SMALL so visuals are unchanged. On
+// T-Watch the inner content needs to clear the rounded-corner safe area AND
+// have generous touch breathing room — status bar gets the most, input bar
+// slightly more than the header.
+#ifdef PLATFORM_TWATCH
+constexpr int STATUS_BAR_PAD_HOR  = SAFE_AREA_LEFT + PAD_LARGE;   // 32
+constexpr int INPUT_BAR_PAD_HOR   = SAFE_AREA_LEFT + PAD_MEDIUM;  // 28
+constexpr int CHAT_HEADER_PAD_HOR = SAFE_AREA_LEFT + PAD_SMALL;   // 24
+#else
+constexpr int STATUS_BAR_PAD_HOR  = PAD_SMALL;
+constexpr int INPUT_BAR_PAD_HOR   = PAD_SMALL;
+constexpr int CHAT_HEADER_PAD_HOR = PAD_SMALL;
+#endif
+
+// Chat header / input bar heights. Touch finger targets on T-Watch need to be
+// larger than trackball-click targets on T-Deck.
+#ifdef PLATFORM_TWATCH
+constexpr int CHAT_HEADER_HEIGHT = 56;
+constexpr int CHAT_INPUT_HEIGHT  = 72;
+#else
 constexpr int CHAT_HEADER_HEIGHT = 28;
 constexpr int CHAT_INPUT_HEIGHT  = 36;
+#endif
 
 // Chat bubbles
 constexpr int BUBBLE_RADIUS     = 8;
 constexpr int BUBBLE_MAX_WIDTH  = BOARD_DISP_W * 3 / 4;  // ~75% of screen width
 constexpr int BUBBLE_PAD        = 6;
 
-// Conversation list
+// Conversation list — taller rows on T-Watch for finger touch + bigger fonts.
+#ifdef PLATFORM_TWATCH
+constexpr int CONVO_ROW_HEIGHT  = 64;
+#else
 constexpr int CONVO_ROW_HEIGHT  = 48;
+#endif
 
-// Fonts
+// Fonts — T-Watch bumps every level up by 2-4pt so labels are readable at
+// arm's length. T-Deck unchanged.
+#ifdef PLATFORM_TWATCH
+#define FONT_SMALL    &lv_font_montserrat_14
+#define FONT_NORMAL   &lv_font_montserrat_16
+#define FONT_LARGE    &lv_font_montserrat_20
+#define FONT_TITLE    &lv_font_montserrat_24
+#else
 #define FONT_SMALL    &lv_font_montserrat_12
 #define FONT_NORMAL   &lv_font_montserrat_14
 #define FONT_LARGE    &lv_font_montserrat_16
 #define FONT_TITLE    &lv_font_montserrat_20
+#endif
 
 }  // namespace theme
 }  // namespace mclite

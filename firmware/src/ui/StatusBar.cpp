@@ -18,6 +18,8 @@ void StatusBar::create(lv_obj_t* parent) {
     lv_obj_set_style_border_width(_bar, 0, 0);
     lv_obj_set_style_radius(_bar, 0, 0);
     lv_obj_set_style_pad_all(_bar, theme::PAD_SMALL, 0);
+    // Inner horizontal padding — full-width bg, content inset from edges.
+    lv_obj_set_style_pad_hor(_bar, theme::STATUS_BAR_PAD_HOR, 0);
     lv_obj_clear_flag(_bar, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_flex_flow(_bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
