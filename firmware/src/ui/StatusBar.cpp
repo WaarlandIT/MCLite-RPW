@@ -21,6 +21,69 @@ void StatusBar::create(lv_obj_t* parent) {
     // Inner horizontal padding — full-width bg, content inset from edges.
     lv_obj_set_style_pad_hor(_bar, theme::STATUS_BAR_PAD_HOR, 0);
     lv_obj_clear_flag(_bar, LV_OBJ_FLAG_SCROLLABLE);
+
+#ifdef PLATFORM_TWATCH
+    // T-Watch: two-row layout. Row 1 = device name centered (with optional
+    // OFFGRID badge inline). Row 2 = sound/GPS/battery/time centered, sized
+    // with FONT_STATUSBAR_ICON (28pt — 2x previous) for finger touch.
+    lv_obj_set_flex_flow(_bar, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(_bar, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_row(_bar, theme::PAD_SMALL, 0);
+
+    auto styleRow = [](lv_obj_t* row) {
+        lv_obj_set_size(row, LV_PCT(100), LV_SIZE_CONTENT);
+        lv_obj_set_style_bg_opa(row, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_border_width(row, 0, 0);
+        lv_obj_set_style_pad_all(row, 0, 0);
+        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+        lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    };
+
+    _nameRow = lv_obj_create(_bar);
+    styleRow(_nameRow);
+    lv_obj_set_style_pad_column(_nameRow, theme::PAD_SMALL, 0);
+
+    _iconRow = lv_obj_create(_bar);
+    styleRow(_iconRow);
+    lv_obj_set_style_pad_column(_iconRow, theme::STATUS_BAR_ICON_GAP, 0);
+
+    // OFFGRID indicator — inline with name on row 1.
+    _lblOffgrid = lv_label_create(_nameRow);
+    lv_label_set_text(_lblOffgrid, "OFFGRID");
+    lv_obj_set_style_text_font(_lblOffgrid, FONT_SMALL, 0);
+    lv_obj_set_style_text_color(_lblOffgrid, theme::OFFGRID_ACCENT, 0);
+    lv_obj_add_flag(_lblOffgrid, LV_OBJ_FLAG_HIDDEN);
+
+    // Device name — content-sized so the row centers it.
+    _lblName = lv_label_create(_nameRow);
+    lv_obj_set_style_text_font(_lblName, FONT_SMALL, 0);
+    lv_obj_set_style_text_color(_lblName, theme::TEXT_PRIMARY, 0);
+    lv_label_set_long_mode(_lblName, LV_LABEL_LONG_DOT);
+
+    const auto& cfg = ConfigManager::instance().config();
+    lv_label_set_text(_lblName, cfg.deviceName.c_str());
+
+    // Row 2 icons. All at FONT_STATUSBAR_ICON (28pt) for parity and finger taps.
+    _soundIcon = lv_label_create(_iconRow);
+    lv_obj_set_style_text_font(_soundIcon, FONT_STATUSBAR_ICON, 0);
+    lv_obj_add_flag(_soundIcon, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(_soundIcon, 8);
+    lv_obj_add_event_cb(_soundIcon, soundClickCb, LV_EVENT_CLICKED, this);
+
+    _gpsIcon = lv_label_create(_iconRow);
+    lv_obj_set_style_text_font(_gpsIcon, FONT_STATUSBAR_ICON, 0);
+    lv_obj_set_style_text_color(_gpsIcon, theme::TEXT_SECONDARY, 0);
+
+    _lblBatt = lv_label_create(_iconRow);
+    lv_obj_set_style_text_font(_lblBatt, FONT_STATUSBAR_ICON, 0);
+    lv_obj_set_style_text_color(_lblBatt, theme::TEXT_PRIMARY, 0);
+
+    _lblTime = lv_label_create(_iconRow);
+    lv_obj_set_style_text_font(_lblTime, FONT_STATUSBAR_ICON, 0);
+    lv_obj_set_style_text_color(_lblTime, theme::TEXT_PRIMARY, 0);
+#else
+    // T-Deck: single flex-row, device name left (grow), icons right.
     lv_obj_set_flex_flow(_bar, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(_bar, theme::PAD_SMALL, 0);
@@ -67,6 +130,7 @@ void StatusBar::create(lv_obj_t* parent) {
     _lblTime = lv_label_create(_bar);
     lv_obj_set_style_text_font(_lblTime, FONT_SMALL, 0);
     lv_obj_set_style_text_color(_lblTime, theme::TEXT_PRIMARY, 0);
+#endif
 
     updateSoundIcon();
     update();

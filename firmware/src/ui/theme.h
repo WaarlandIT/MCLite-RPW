@@ -64,9 +64,11 @@ constexpr int SAFE_AREA_RIGHT  = 0;
 // just clip the background fill.
 constexpr int CONTENT_WIDTH = BOARD_DISP_W - SAFE_AREA_LEFT - SAFE_AREA_RIGHT;
 
-// Status bar — taller on T-Watch to fit the bigger touch fonts.
+// Status bar — taller on T-Watch to fit a two-row layout (centered device
+// name on top, finger-sized centered icons below). T-Deck stays single-row.
 #ifdef PLATFORM_TWATCH
-constexpr int STATUS_BAR_HEIGHT = 32;
+constexpr int STATUS_BAR_HEIGHT   = 72;
+constexpr int STATUS_BAR_ICON_GAP = PAD_LARGE;  // 12 px between icons on row 2
 #else
 constexpr int STATUS_BAR_HEIGHT = 24;
 #endif
@@ -142,10 +144,11 @@ constexpr int CONVO_ROW_HEIGHT  = 48;
 // Fonts — T-Watch bumps every level up by 2-4pt so labels are readable at
 // arm's length. T-Deck unchanged.
 #ifdef PLATFORM_TWATCH
-#define FONT_SMALL    &lv_font_montserrat_14
-#define FONT_NORMAL   &lv_font_montserrat_16
-#define FONT_LARGE    &lv_font_montserrat_20
-#define FONT_TITLE    &lv_font_montserrat_24
+#define FONT_SMALL          &lv_font_montserrat_14
+#define FONT_NORMAL         &lv_font_montserrat_16
+#define FONT_LARGE          &lv_font_montserrat_20
+#define FONT_TITLE          &lv_font_montserrat_24
+#define FONT_STATUSBAR_ICON &lv_font_montserrat_28  // 2x current icon size for finger taps
 #else
 #define FONT_SMALL    &lv_font_montserrat_12
 #define FONT_NORMAL   &lv_font_montserrat_14

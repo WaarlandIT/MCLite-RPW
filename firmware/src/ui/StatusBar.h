@@ -16,6 +16,8 @@ public:
 
 private:
     lv_obj_t* _bar        = nullptr;
+    lv_obj_t* _nameRow    = nullptr;  // T-Watch only: row 1 container
+    lv_obj_t* _iconRow    = nullptr;  // T-Watch only: row 2 container
     lv_obj_t* _lblOffgrid = nullptr;
     lv_obj_t* _lblName    = nullptr;
     lv_obj_t* _soundIcon  = nullptr;
