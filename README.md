@@ -21,6 +21,10 @@ Most features below are optional. The primary goal is to keep things extremely s
 <img src="docs/images/chat-view.jpg" width="400" alt="Chat view screen">
 </p>
 
+<p align="center">
+<img src="docs/images/twatchultra.jpg" width="810" alt="MCLite running on three T-Watch Ultra devices">
+</p>
+
 ## Supported hardware
 
 MCLite runs on two LilyGo ESP32-S3 boards. They share the same SX1262 LoRa radio, so they interoperate on the same mesh and run the same features -- pick whichever form factor suits you (or mix both in one group).
