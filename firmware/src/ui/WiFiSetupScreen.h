@@ -34,6 +34,7 @@ private:
 #endif
     String _selSsid;
     String _selPassword;
+    bool   _selFromSaved = false;    // this connect attempt reused stored creds
     bool   _lastConnected = false;   // for tick() change detection
 
     static constexpr int MAX_NETS = 20;

@@ -280,12 +280,26 @@ void WiFiSetupScreen::openPasswordEntry(const String& ssid) {
 #ifdef PLATFORM_TWATCH
     _pwKbd = lv_keyboard_create(_pwOverlay);
     lv_keyboard_set_textarea(_pwKbd, _pwTextarea);
+    // popovers MUST be set before NO_REPEAT — set_popovers rebuilds the ctrl_map
+    // from the LVGL default, wiping any flags set beforehand (see ChatScreen).
     lv_keyboard_set_popovers(_pwKbd, true);
+    // Disable long-press auto-repeat — otherwise holding a key types it every
+    // ~100 ms (LVGL's LONG_PRESSED_REPEAT cycle).
+    lv_btnmatrix_set_btn_ctrl_all(_pwKbd, LV_BTNMATRIX_CTRL_NO_REPEAT);
     lv_obj_add_event_cb(_pwKbd, pwReadyCb, LV_EVENT_READY, this);
     lv_obj_add_event_cb(_pwKbd, [](lv_event_t* ev) {
         auto* self = static_cast<WiFiSetupScreen*>(lv_event_get_user_data(ev));
-        if (self) lv_async_call(closePwAsyncCb, self);
-    }, LV_EVENT_CANCEL, this);
+        if (!self) return;
+        lv_event_code_t code = lv_event_get_code(ev);
+        // Mode switches (abc/123/symbols) rebuild the ctrl_map → re-apply
+        // NO_REPEAT on each key press. Only on VALUE_CHANGED (not every event)
+        // to avoid invalidating all keys per frame.
+        if (code == LV_EVENT_VALUE_CHANGED) {
+            lv_btnmatrix_set_btn_ctrl_all(self->_pwKbd, LV_BTNMATRIX_CTRL_NO_REPEAT);
+        } else if (code == LV_EVENT_CANCEL) {
+            lv_async_call(closePwAsyncCb, self);
+        }
+    }, LV_EVENT_ALL, this);
 #endif
 }
 
@@ -309,10 +323,20 @@ void WiFiSetupScreen::doConnect(const String& ssid, const String& password) {
     bool ok = WiFiManager::instance().connect(ssid, password);
     if (!ok) {
         WiFiManager::instance().disconnect();
-        int st = WiFiManager::instance().lastStatus();
-        UIManager::instance().showToast(st == 1 ? t("wifi_ssid_not_found") : t("wifi_connect_failed"));
+        int st = WiFiManager::instance().lastStatus();  // 1 == WL_NO_SSID_AVAIL
         updateStatusUi();
-        rebuildList();   // back to the picker so they can retry
+        if (_selFromSaved && st != 1) {
+            // Stored password no longer works (e.g. the AP password changed).
+            // Ask for it again — a successful entry overwrites the saved one.
+            // (_selFromSaved is false on the retry, so a second failure falls
+            // through to the list instead of trapping the user in the prompt.)
+            UIManager::instance().showToast(t("wifi_connect_failed"));
+            openPasswordEntry(ssid);
+        } else {
+            UIManager::instance().showToast(st == 1 ? t("wifi_ssid_not_found")
+                                                    : t("wifi_connect_failed"));
+            rebuildList();   // back to the picker so they can retry
+        }
         return;
     }
 
@@ -369,6 +393,7 @@ void WiFiSetupScreen::switchCb(lv_event_t* e) {
         if (cfg.wifi.ssid.length() > 0) {
             self->_selSsid = cfg.wifi.ssid;
             self->_selPassword = cfg.wifi.password;
+            self->_selFromSaved = true;
             lv_async_call(connectAsyncCb, self);   // connect to saved network
         } else {
             // No saved network — revert the switch and let them pick from the list.
@@ -395,11 +420,14 @@ void WiFiSetupScreen::rowClickCb(lv_event_t* e) {
     if (self->_nets[idx].open) {
         self->_selSsid = self->_nets[idx].ssid;
         self->_selPassword = "";
+        self->_selFromSaved = false;
         lv_async_call(connectAsyncCb, self);
     } else if (self->_nets[idx].ssid == cfg.wifi.ssid && cfg.wifi.password.length() > 0) {
-        // Saved network — reuse the stored password, no prompt.
+        // Saved network — reuse the stored password, no prompt. If it no longer
+        // works (AP password changed), doConnect re-opens the password entry.
         self->_selSsid = self->_nets[idx].ssid;
         self->_selPassword = cfg.wifi.password;
+        self->_selFromSaved = true;
         lv_async_call(connectAsyncCb, self);
     } else {
         self->openPasswordEntry(self->_nets[idx].ssid);
@@ -410,6 +438,7 @@ void WiFiSetupScreen::pwReadyCb(lv_event_t* e) {
     auto* self = static_cast<WiFiSetupScreen*>(lv_event_get_user_data(e));
     if (!self || !self->_pwTextarea) return;
     self->_selPassword = String(lv_textarea_get_text(self->_pwTextarea));
+    self->_selFromSaved = false;   // freshly typed — a failure shouldn't loop the prompt
     lv_async_call(connectAsyncCb, self);
 }
 
