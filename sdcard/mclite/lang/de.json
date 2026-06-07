@@ -108,6 +108,11 @@
     "offgrid_confirm_off_title": "Offgrid deaktivieren?",
     "offgrid_confirm_off_body": "Zurueck zur normalen Frequenz (%.3f MHz). Geraet startet neu.",
     "reboot_now": "Jetzt neu starten",
+    "fw_update_title": "Firmware installieren?",
+    "fw_update_body": "%s installieren?\nAktuell: %s\nDas Geraet startet neu.",
+    "fw_install": "Installieren",
+    "fw_installing": "Installiere...\nGeraet nicht ausschalten",
+    "fw_update_failed": "Installation fehlgeschlagen",
 
     "heard_adverts_title": "Empfangene Adverts",
     "heard_adverts_empty": "Noch keine Adverts empfangen",

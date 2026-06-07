@@ -108,6 +108,11 @@
     "offgrid_confirm_off_title": "Disattivare modalita offgrid?",
     "offgrid_confirm_off_body": "Ritorno alla frequenza normale (%.3f MHz). Il dispositivo si riavvia.",
     "reboot_now": "Riavvia ora",
+    "fw_update_title": "Installare il firmware?",
+    "fw_update_body": "Installare %s?\nAttuale: %s\nIl dispositivo si riavvia.",
+    "fw_install": "Installa",
+    "fw_installing": "Installazione...\nNon spegnere",
+    "fw_update_failed": "Installazione fallita",
 
     "heard_adverts_title": "Adverts ricevuti",
     "heard_adverts_empty": "Nessun advert ricevuto",

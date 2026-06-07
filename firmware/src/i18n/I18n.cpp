@@ -110,6 +110,13 @@ const DefaultString DEFAULT_STRINGS[] = {
     {"offgrid_confirm_off_body", "Return to normal frequency (%.3f MHz). Device will reboot."},
     {"reboot_now",               "Reboot now"},
 
+    // Firmware update (SD-card install)
+    {"fw_update_title",          "Install firmware?"},
+    {"fw_update_body",           "Install %s?\nCurrent: %s\nThe device will reboot."},
+    {"fw_install",               "Install"},
+    {"fw_installing",            "Installing...\nDo not power off"},
+    {"fw_update_failed",         "Install failed"},
+
     // Telemetry
     {"telem_title",         "Contact Info"},
     {"telem_battery",       "Battery: %.2fV (~%d%%)"},

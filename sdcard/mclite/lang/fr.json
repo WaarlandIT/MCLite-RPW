@@ -108,6 +108,11 @@
     "offgrid_confirm_off_title": "Desactiver le mode hors-grille?",
     "offgrid_confirm_off_body": "Retour a la frequence normale (%.3f MHz). L'appareil va redemarrer.",
     "reboot_now": "Redemarrer maintenant",
+    "fw_update_title": "Installer le firmware?",
+    "fw_update_body": "Installer %s?\nActuel: %s\nL'appareil va redemarrer.",
+    "fw_install": "Installer",
+    "fw_installing": "Installation...\nNe pas eteindre",
+    "fw_update_failed": "Echec de l'installation",
 
     "heard_adverts_title": "Adverts recus",
     "heard_adverts_empty": "Aucun advert recu",

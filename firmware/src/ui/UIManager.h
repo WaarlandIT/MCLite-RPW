@@ -28,6 +28,11 @@ public:
     void openChat(const ConvoId& id);
     void goHome();
 
+    // Firmware update: scan SD for a board-matching firmware bin and, if a
+    // newer/different one is found, prompt to install it. Call once after the
+    // main screen loads.
+    void checkForSdFirmware();
+
     // Called when a new message arrives (from MeshManager callback)
     void onIncomingMessage(const ConvoId& id, const Message& msg);
 
@@ -174,6 +179,16 @@ private:
 
     // Modal input group — isolates trackball/keyboard to modal while open
     lv_group_t* _modalGroup = nullptr;
+
+    // Firmware-update (SD install) modal state
+    lv_obj_t* _fwBar = nullptr;            // progress bar during install
+    String    _fwPath;                     // SD path of the bin being offered
+    String    _fwVersion;                  // its parsed version
+    bool      _fwPromptDismissed = false;  // don't re-prompt after Abort this session
+    void showFirmwareInstallModal(const String& path, const String& version);
+    void doFirmwareInstall();
+    static void fwModalBtnCb(lv_event_t* e);
+    static void fwProgressCb(uint8_t percent, void* user);
 
     // Telemetry modal state
     lv_obj_t*   _telemMsgbox = nullptr;
