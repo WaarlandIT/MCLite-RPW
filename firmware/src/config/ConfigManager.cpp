@@ -42,6 +42,7 @@ void ConfigManager::applyDefaults() {
     _config.gpsClockOffset = defaults::GPS_CLOCK_OFFSET;
     _config.gpsTimezone    = defaults::GPS_TIMEZONE;
     _config.gpsLastKnownMaxAge = defaults::GPS_LAST_KNOWN_MAX_AGE;
+    _config.locationAdvertEnabled = defaults::GPS_LOCATION_ADVERT;
     _config.battery.lowAlertEnabled   = defaults::BATTERY_LOW_ALERT_ENABLED;
     _config.battery.lowAlertThreshold = defaults::BATTERY_LOW_ALERT_THRESHOLD;
     _config.security.lockMode     = defaults::LOCK_MODE;
@@ -241,6 +242,7 @@ bool ConfigManager::parseJson(const String& json) {
     _config.gpsTimezone = doc["gps"]["timezone"] | defaults::GPS_TIMEZONE;
     uint16_t lastKnownAge = doc["gps"]["last_known_max_age"] | defaults::GPS_LAST_KNOWN_MAX_AGE;
     _config.gpsLastKnownMaxAge = constrain(lastKnownAge, (uint16_t)60, (uint16_t)7200);
+    _config.locationAdvertEnabled = doc["gps"]["location_advert"] | defaults::GPS_LOCATION_ADVERT;
 
     // Battery
     _config.battery.lowAlertEnabled   = doc["battery"]["low_alert_enabled"] | defaults::BATTERY_LOW_ALERT_ENABLED;
@@ -394,6 +396,7 @@ String ConfigManager::toJson() const {
         doc["gps"]["timezone"]       = _config.gpsTimezone;
     }
     doc["gps"]["last_known_max_age"] = _config.gpsLastKnownMaxAge;
+    doc["gps"]["location_advert"]    = _config.locationAdvertEnabled;
 
     doc["battery"]["low_alert_enabled"]   = _config.battery.lowAlertEnabled;
     doc["battery"]["low_alert_threshold"] = _config.battery.lowAlertThreshold;

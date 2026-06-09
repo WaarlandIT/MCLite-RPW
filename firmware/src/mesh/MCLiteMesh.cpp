@@ -279,13 +279,31 @@ void MCLiteMesh::loop() {
 bool MCLiteMesh::advertise(const char* name) {
     if (!_ready) return false;
 
-    // Create advertisement without GPS coordinates
-    // Location is only shared via telemetry response to authorized contacts
-    mesh::Packet* pkt = createSelfAdvert(name);
+    // Optionally include our own location so we appear on others' maps. Opt-in
+    // (default off): adverts are broadcast unencrypted to everyone in range, so
+    // this is distinct from targeted per-contact telemetry. Uses MeshCore's
+    // native advert location field (lat/lon x1e6) at full precision. We only
+    // attach a position that's still acceptable — a LIVE fix, or a last-known
+    // one still within gpsLastKnownMaxAge (fixStatus() returns NO_FIX once it
+    // expires), so we never broadcast a stale location.
+    mesh::Packet* pkt = nullptr;
+    if (ConfigManager::instance().config().locationAdvertEnabled) {
+        auto& gps = GPS::instance();
+        FixStatus fs = gps.fixStatus();
+        if (fs == FixStatus::LIVE || fs == FixStatus::LAST_KNOWN) {
+            double lat = (fs == FixStatus::LIVE) ? gps.lat() : gps.cachedLat();
+            double lon = (fs == FixStatus::LIVE) ? gps.lon() : gps.cachedLon();
+            pkt = createSelfAdvert(name, lat, lon);
+            LOGF("[MCLiteMesh] Advertised as %s (%.5f, %.5f)\n", name, lat, lon);
+        }
+    }
+    if (!pkt) {                       // disabled or no acceptable fix → name-only
+        pkt = createSelfAdvert(name);
+        LOGF("[MCLiteMesh] Advertised as %s\n", name);
+    }
     if (!pkt) return false;
 
     sendWithScope(_globalScope, pkt, 0);
-    LOGF("[MCLiteMesh] Advertised as %s\n", name);
     return true;
 }
 

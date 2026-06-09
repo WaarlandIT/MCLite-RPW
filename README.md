@@ -50,9 +50,9 @@ That's it. Full walkthrough — including updates and companion mode — in [Get
 - **Heard adverts** -- browse a rolling 64-entry list of every device your radio has decoded, reachable from the admin screen. Per-row type icon (chat / repeater / room / sensor), hops, last-heard age, GPS when present. Tap a chat advert for the full per-hop path + fingerprint and a one-tap **Save** that adds it to your contact list (queued, applies on next reboot). Manual-advert button announces yourself on demand without waiting for the next periodic cycle
 - **SOS alerts** -- long-press the trackball (hold 6 seconds) to broadcast an emergency alert
 - **Battery alerts** -- automatic low-battery warnings sent to your contacts
-- **GPS location sharing** -- manually send your position in lat/lon or UTMREF/MGRS (military grid) format, used by search and rescue worldwide. Last-known position support when GPS signal is temporarily lost
+- **GPS location sharing** -- manually send your position in lat/lon or UTMREF/MGRS (military grid) format, used by search and rescue worldwide. Last-known position support when GPS signal is temporarily lost. Optionally **broadcast your location in adverts** (`location_advert`, off by default) so contacts see you on their map -- note adverts are unencrypted and reach everyone in range, unlike targeted per-contact telemetry
 - **Telemetry** -- responds to MeshCore-standard telemetry requests (battery, GPS) with per-contact permissions. Compatible with MeshCore companion apps. Optionally request telemetry from contacts to see their battery, location, and distance
-- **Map view** -- visualise a contact's position on a slippy map (optional, requires tile pack on SD card). Drag to pan, zoomable, with a Center button and own-device marker overlaid
+- **Map view** -- visualise positions on a slippy map (optional, requires tile pack on SD card). Tap a contact's name in chat for their position, or tap the **status-bar GPS icon** for the general map: your own location plus markers for every heard node / contact that carries GPS (same chat / repeater / room / sensor symbols as the heard-adverts list). Tap a marker for its name, drag to pan, zoomable, with Center and Reload buttons
 - **Message history** -- conversations saved to SD card and restored on reboot
 - **Quick replies** -- optional canned message picker for fast responses (OK, Copy, Need help, etc.), translatable and customizable
 - **Multi-language** -- English, German, French, and Italian included. Add your own translations via SD card
@@ -83,8 +83,8 @@ Visit the [MCLite Web Flasher](https://laserir.github.io/MCLite/tools/web-flashe
 Download the latest binary for your board from the [Releases](../../releases) page -- `mclite-v*.bin` for the **T-Deck Plus**, `mclite-watch-v*.bin` for the **T-Watch Ultra** -- and flash with esptool at offset `0x0`:
 
 ```
-esptool.py write_flash 0x0 mclite-v0.3.0.bin          # T-Deck Plus
-esptool.py write_flash 0x0 mclite-watch-v0.3.0.bin    # T-Watch Ultra
+esptool.py write_flash 0x0 mclite-v0.3.1.bin          # T-Deck Plus
+esptool.py write_flash 0x0 mclite-watch-v0.3.1.bin    # T-Watch Ultra
 ```
 
 The T-Watch Ultra has no power switch -- if esptool can't connect, put it in download mode manually: hold **BOOT**, tap **RST**, release **BOOT**.
@@ -271,7 +271,8 @@ To set up a group: use **Fleet Mode** in the Setup Wizard. Add a device for each
     "enabled": true,
     "timezone": "",                    // POSIX TZ string for automatic DST (e.g. "CET-1CEST,M3.5.0/2,M10.5.0/3")
     "clock_offset": 0,                 // UTC offset in hours, no DST (-12 to +14). Ignored if timezone is set
-    "last_known_max_age": 1800         // Seconds before last-known GPS position expires (60-7200)
+    "last_known_max_age": 1800,        // Seconds before last-known GPS position expires (60-7200)
+    "location_advert": false           // Broadcast your location in adverts so others see you on their map (unencrypted, off by default)
   },
 
   "battery": {

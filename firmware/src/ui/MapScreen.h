@@ -53,6 +53,7 @@ private:
 
     // --- input ---
     static void closeBtnCb(lv_event_t* e);
+    static void reloadBtnCb(lv_event_t* e);   // general mode: re-scan heard nodes
     static void zoomInCb(lv_event_t* e);
     static void zoomOutCb(lv_event_t* e);
     static void centerBtnCb(lv_event_t* e);
@@ -67,6 +68,7 @@ private:
     lv_obj_t*   _canvas       = nullptr;
     lv_color_t* _cbuf         = nullptr;
     lv_obj_t*   _closeBtn     = nullptr;
+    lv_obj_t*   _reloadBtn    = nullptr;   // general mode only: re-scan heard nodes
     lv_obj_t*   _zoomInBtn    = nullptr;
     lv_obj_t*   _zoomOutBtn   = nullptr;
     lv_obj_t*   _centerBtn    = nullptr;
@@ -100,6 +102,7 @@ private:
 
     // Pan-gesture state.
     bool        _panActive    = false;
+    bool        _panMoved     = false;  // crossed the tap-slop dead-zone → it's a pan, not a tap
     lv_point_t  _panLast{0, 0};
     lv_point_t  _panStart{0, 0};   // press point, for tap-vs-pan disambiguation
     uint32_t    _lastRenderMs = 0;

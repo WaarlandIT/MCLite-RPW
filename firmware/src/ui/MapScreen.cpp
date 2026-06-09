@@ -33,10 +33,14 @@ static constexpr int MAP_BTN          = 56;
 // info label clear the bezel curve.
 static constexpr int MAP_CORNER_INSET = 36;
 #define MAP_BTN_FONT FONT_HEADING
+// Movement (px) below which a press is a tap, not a pan. Larger on the T-Watch
+// touch panel where a fingertip tap jitters more.
+static constexpr int MAP_TAP_SLOP     = 16;
 #else
 static constexpr int MAP_BTN          = 32;
 static constexpr int MAP_CORNER_INSET = 0;
 #define MAP_BTN_FONT FONT_NORMAL
+static constexpr int MAP_TAP_SLOP     = 10;
 #endif
 
 // Marker symbol + color + word per advert type — kept identical to the
@@ -192,6 +196,7 @@ void MapScreen::doOpen() {
     _prevGroup = UIManager::instance().inputGroup();
     _mapGroup = lv_group_create();
     lv_group_add_obj(_mapGroup, _closeBtn);
+    if (_reloadBtn) lv_group_add_obj(_mapGroup, _reloadBtn);
     lv_group_add_obj(_mapGroup, _zoomInBtn);
     lv_group_add_obj(_mapGroup, _centerBtn);
     lv_group_add_obj(_mapGroup, _zoomOutBtn);
@@ -304,6 +309,22 @@ void MapScreen::buildWidgets() {
     }
     lv_obj_add_event_cb(_closeBtn, &MapScreen::closeBtnCb, LV_EVENT_CLICKED, this);
 
+    // Reload (general mode only) — left of Close. Re-scans the heard/contact
+    // caches so nodes heard while the map is open appear without panning.
+    if (_general) {
+        _reloadBtn = lv_btn_create(_screen);
+        styleBtn(_reloadBtn);
+        lv_obj_align(_reloadBtn, LV_ALIGN_TOP_RIGHT,
+                     -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                      (MAP_CORNER_INSET + theme::PAD_SMALL));
+        {
+            lv_obj_t* lbl = lv_label_create(_reloadBtn);
+            lv_label_set_text(lbl, LV_SYMBOL_REFRESH);
+            styleLbl(lbl);
+        }
+        lv_obj_add_event_cb(_reloadBtn, &MapScreen::reloadBtnCb, LV_EVENT_CLICKED, this);
+    }
+
     _zoomInBtn = lv_btn_create(_screen);
     styleBtn(_zoomInBtn);
     lv_obj_align(_zoomInBtn, LV_ALIGN_RIGHT_MID,
@@ -372,7 +393,7 @@ void MapScreen::destroyWidgets() {
         lv_obj_del(_screen);
         _screen = nullptr;
     }
-    _canvas = _closeBtn = _zoomInBtn = _zoomOutBtn = _centerBtn = _infoLabel = _selLabel = nullptr;
+    _canvas = _closeBtn = _reloadBtn = _zoomInBtn = _zoomOutBtn = _centerBtn = _infoLabel = _selLabel = nullptr;
 }
 
 void MapScreen::render() {
@@ -450,8 +471,8 @@ void MapScreen::drawContactMarker() {
     // this lands on canvas centre; after panning, the marker visually drifts.
     TileFrac fk = latLonToTileXY(_contactLat, _contactLon, _zoom);
     TileFrac fc = latLonToTileXY(_centerLat,  _centerLon,  _zoom);
-    const int dx = (int)((fk.x - fc.x) * (double)TILE);
-    const int dy = (int)((fk.y - fc.y) * (double)TILE);
+    const int dx = (int)lround((fk.x - fc.x) * (double)TILE);
+    const int dy = (int)lround((fk.y - fc.y) * (double)TILE);
     const int px = CANVAS_W / 2 + dx;
     const int py = CANVAS_H / 2 + dy;
     if (px < -6 || px >= CANVAS_W + 6 || py < -6 || py >= CANVAS_H + 6) return;
@@ -462,9 +483,13 @@ void MapScreen::drawContactMarker() {
 bool MapScreen::markerScreenPos(double lat, double lon, int& px, int& py) const {
     TileFrac fm = latLonToTileXY(lat, lon, _zoom);
     TileFrac fc = latLonToTileXY(_centerLat, _centerLon, _zoom);
-    px = CANVAS_W / 2 + (int)((fm.x - fc.x) * (double)TILE);
-    py = CANVAS_H / 2 + (int)((fm.y - fc.y) * (double)TILE);
-    return (px >= -8 && px < CANVAS_W + 8 && py >= -8 && py < CANVAS_H + 8);
+    // lround (not truncation) so marker pixels track the tile blit exactly and
+    // don't jitter off by a pixel across zoom levels.
+    px = CANVAS_W / 2 + (int)lround((fm.x - fc.x) * (double)TILE);
+    py = CANVAS_H / 2 + (int)lround((fm.y - fc.y) * (double)TILE);
+    // Generous off-canvas margin (one glyph + selection-ring radius) so a marker
+    // sitting near the viewport edge isn't dropped a zoom step before its tile.
+    return (px >= -24 && px < CANVAS_W + 24 && py >= -24 && py < CANVAS_H + 24);
 }
 
 // Filled annulus of width `th` ending at radius r (selection highlight).
@@ -517,8 +542,8 @@ void MapScreen::drawOwnMarker() {
 
     TileFrac fo = latLonToTileXY(olat, olon, _zoom);
     TileFrac fc = latLonToTileXY(_centerLat, _centerLon, _zoom);
-    const int dx = (int)((fo.x - fc.x) * (double)TILE);
-    const int dy = (int)((fo.y - fc.y) * (double)TILE);
+    const int dx = (int)lround((fo.x - fc.x) * (double)TILE);
+    const int dy = (int)lround((fo.y - fc.y) * (double)TILE);
     const int px = CANVAS_W / 2 + dx;
     const int py = CANVAS_H / 2 + dy;
     if (px < -6 || px >= CANVAS_W + 6 || py < -6 || py >= CANVAS_H + 6) return;
@@ -580,6 +605,11 @@ void MapScreen::closeBtnCb(lv_event_t* e) {
     if (self) self->close();
 }
 
+void MapScreen::reloadBtnCb(lv_event_t* e) {
+    MapScreen* self = static_cast<MapScreen*>(lv_event_get_user_data(e));
+    if (self) self->render();   // render() rebuilds markers in general mode
+}
+
 void MapScreen::zoomInCb(lv_event_t* e) {
     MapScreen* self = static_cast<MapScreen*>(lv_event_get_user_data(e));
     if (!self) return;
@@ -619,7 +649,7 @@ void MapScreen::centerBtnCb(lv_event_t* e) {
 
 void MapScreen::hitTestMarker(const lv_point_t& p) {
     if (!_selLabel) return;
-    int best = -1, bestD2 = 14 * 14;   // tap tolerance (px²)
+    int best = -1, bestD2 = 20 * 20;   // tap tolerance (px²) — fingertip-friendly
     for (size_t i = 0; i < _markers.size(); i++) {
         int px, py;
         if (!markerScreenPos(_markers[i].lat, _markers[i].lon, px, py)) continue;
@@ -668,6 +698,7 @@ void MapScreen::panPressedCb(lv_event_t* e) {
     lv_indev_get_point(indev, &self->_panLast);
     self->_panStart = self->_panLast;   // remember press point for tap detection
     self->_panActive = true;
+    self->_panMoved  = false;
 }
 
 void MapScreen::panPressingCb(lv_event_t* e) {
@@ -677,6 +708,19 @@ void MapScreen::panPressingCb(lv_event_t* e) {
     if (!indev) return;
     lv_point_t now;
     lv_indev_get_point(indev, &now);
+
+    // Tap-slop dead-zone: until the finger travels past the slop from the press
+    // point, treat it as a still tap — don't pan (which would shift the map and
+    // steal the tap from hit-testing). Once exceeded, it's a pan for good.
+    if (!self->_panMoved) {
+        int sdx = now.x - self->_panStart.x;
+        int sdy = now.y - self->_panStart.y;
+        if (sdx * sdx + sdy * sdy <= MAP_TAP_SLOP * MAP_TAP_SLOP) {
+            self->_panLast = now;   // track so the first real pan delta isn't a jump
+            return;
+        }
+        self->_panMoved = true;
+    }
 
     int dxPx = now.x - self->_panLast.x;
     int dyPx = now.y - self->_panLast.y;
@@ -712,15 +756,14 @@ void MapScreen::panReleasedCb(lv_event_t* e) {
     if (!self || !self->_panActive) return;
     self->_panActive = false;
 
-    // Tap vs pan: a press that barely moved is a tap. In general mode, a tap
-    // selects the nearest heard marker (name → _selLabel); a pan clears it.
+    // Tap vs pan: if the press never crossed the slop dead-zone it's a tap. In
+    // general mode, a tap selects the nearest heard marker (name → _selLabel);
+    // a pan clears it.
     if (self->_general) {
-        lv_point_t up = self->_panLast;
-        lv_indev_t* indev = lv_indev_get_act();
-        if (indev) lv_indev_get_point(indev, &up);
-        int mdx = up.x - self->_panStart.x;
-        int mdy = up.y - self->_panStart.y;
-        if (mdx * mdx + mdy * mdy <= 8 * 8) {
+        if (!self->_panMoved) {
+            lv_point_t up = self->_panStart;
+            lv_indev_t* indev = lv_indev_get_act();
+            if (indev) lv_indev_get_point(indev, &up);
             self->hitTestMarker(up);
         } else {
             self->_hasSel = false;                                 // panned → clear selection

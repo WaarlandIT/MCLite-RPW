@@ -473,6 +473,7 @@ void AdminScreen::show() {
         }
         addRow(t("gps_coord_format"), cfg.messaging.locationFormat);
         addRow("Last Known Max", String(cfg.gpsLastKnownMaxAge) + "s");
+        addRow("Location Advert", cfg.locationAdvertEnabled ? t("on") : t("off"));
         if (cfg.gpsTimezone.length() > 0 && TimeHelper::isValidPosixTz(cfg.gpsTimezone)) {
             // Show abbreviation (chars before first digit/sign) + "(auto-DST)"
             String abbr;
