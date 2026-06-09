@@ -396,6 +396,15 @@ void ChatScreen::addBubble(const Message& msg) {
         lv_obj_set_style_text_font(sender, FONT_BODY, 0);
         lv_obj_set_style_text_color(sender, theme::ACCENT, 0);
         lv_label_set_text(sender, msg.senderName.c_str());
+        // Tap the name → prepend "@name " into the input (reply mention). The name
+        // String is owned by the label and freed on delete; `this` rides the cb.
+        lv_obj_add_flag(sender, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_ext_click_area(sender, 6);
+        lv_obj_set_user_data(sender, new String(msg.senderName));
+        lv_obj_add_event_cb(sender, senderNameClickCb, LV_EVENT_CLICKED, this);
+        lv_obj_add_event_cb(sender, [](lv_event_t* e) {
+            delete static_cast<String*>(lv_obj_get_user_data(lv_event_get_target(e)));
+        }, LV_EVENT_DELETE, nullptr);
     }
 
     // Message text
@@ -630,6 +639,25 @@ void ChatScreen::textareaCb(lv_event_t* e) {
         self->_onSend(*self->_currentConvo, String(text));
         lv_textarea_set_text(self->_textarea, "");
     }
+}
+
+void ChatScreen::senderNameClickCb(lv_event_t* e) {
+    auto* self = static_cast<ChatScreen*>(lv_event_get_user_data(e));
+    auto* name = static_cast<String*>(lv_obj_get_user_data(lv_event_get_target(e)));
+    if (!self || !name || !self->_textarea) return;
+    // Prepend "@name " to whatever's already typed, then bring up the keyboard.
+    String cur = lv_textarea_get_text(self->_textarea);
+    String mention = "@" + *name + " ";
+    // Only prepend if this mention isn't already in the draft — repeated taps just
+    // (re)focus the input instead of stacking "@name @name ...".
+    if (cur.indexOf(mention) < 0) {
+        lv_textarea_set_text(self->_textarea, (mention + cur).c_str());
+    }
+#ifdef PLATFORM_TWATCH
+    self->showKeyboard();                       // bring up the on-screen keyboard
+#else
+    lv_group_focus_obj(self->_textarea);        // T-Deck: physical keyboard types here
+#endif
 }
 
 void ChatScreen::retryBtnCb(lv_event_t* e) {

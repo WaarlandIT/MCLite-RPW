@@ -1,5 +1,6 @@
 #include "UpdateChecker.h"
 #include "util/log.h"
+#include "config/defaults.h"   // MCLITE_REPO_OWNER / MCLITE_REPO_NAME
 
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
@@ -10,8 +11,9 @@ namespace mclite {
 // arduino-esp32 embeds a Mozilla root-CA bundle; this symbol points at it.
 extern const uint8_t rootca_crt_bundle_start[] asm("_binary_x509_crt_bundle_start");
 
-static const char* API_URL =
-    "https://api.github.com/repos/laserir/MCLite/releases/latest";
+// Built from the (overridable) repo macros so forks check their own releases.
+static const String API_URL =
+    String("https://api.github.com/repos/") + MCLITE_REPO_OWNER + "/" + MCLITE_REPO_NAME + "/releases/latest";
 
 #ifdef PLATFORM_TWATCH
 static const char* ASSET_PREFIX = "mclite-watch-v";
@@ -26,7 +28,7 @@ bool UpdateChecker::checkLatest(RemoteRelease& out) {
     HTTPClient http;
     http.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
     http.setUserAgent("MCLite");                       // GitHub 403s without a UA
-    if (!http.begin(client, API_URL)) return false;
+    if (!http.begin(client, API_URL.c_str())) return false;
     http.addHeader("Accept", "application/vnd.github+json");
 
     int code = http.GET();

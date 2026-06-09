@@ -253,6 +253,9 @@ void loop() {
         }
 #endif
     }
+    // Fallback: when on WiFi without a GPS fix, sync the clock over NTP (no-op once
+    // GPS has synced — GPS is checked first above and wins).
+    mclite::TimeHelper::instance().maybeNtpSync();
     MeshManager::instance().update();
     updateCompanion();
     UIManager::instance().update();
