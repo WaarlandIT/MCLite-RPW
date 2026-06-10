@@ -6,6 +6,7 @@
 #include "../hal/GPS.h"
 #include "../i18n/I18n.h"
 #include "../storage/TelemetryCache.h"
+#include "../util/ContactLocation.h"
 #include "../config/ConfigManager.h"
 
 namespace mclite {
@@ -224,29 +225,34 @@ void ConvoListScreen::addConvoRow(Conversation* convo) {
             const auto& showTelem = ConfigManager::instance().config().messaging.showTelemetry;
             if (showTelem != "none") {
                 const TelemetryData* td = TelemetryCache::instance().get(c->publicKey);
-                if (td && TelemetryCache::instance().isFresh(c->publicKey)) {
-                    // Battery icon (tiered, same as own battery in status bar)
-                    if (td->hasVoltage && (showTelem == "battery" || showTelem == "both")) {
-                        int pct = constrain((int)((td->voltage - 3.0f) / 1.2f * 100.0f), 0, 100);
-                        const char* battSym;
-                        if (pct > 80)      battSym = LV_SYMBOL_BATTERY_FULL;
-                        else if (pct > 60) battSym = LV_SYMBOL_BATTERY_3;
-                        else if (pct > 40) battSym = LV_SYMBOL_BATTERY_2;
-                        else if (pct > 20) battSym = LV_SYMBOL_BATTERY_1;
-                        else               battSym = LV_SYMBOL_BATTERY_EMPTY;
-                        lv_obj_t* battIcon = lv_label_create(topLine);
-                        lv_obj_set_style_text_font(battIcon, FONT_BODY, 0);
-                        lv_label_set_text(battIcon, battSym);
-                        lv_obj_set_style_text_color(battIcon,
-                            pct <= 20 ? theme::BATTERY_LOW : theme::TEXT_PRIMARY, 0);
-                    }
-                    // GPS icon
-                    if (td->hasLocation && (showTelem == "location" || showTelem == "both")) {
-                        lv_obj_t* locIcon = lv_label_create(topLine);
-                        lv_obj_set_style_text_font(locIcon, FONT_BODY, 0);
-                        lv_label_set_text(locIcon, LV_SYMBOL_GPS);
-                        lv_obj_set_style_text_color(locIcon, theme::TEXT_PRIMARY, 0);
-                    }
+                bool telemFresh = td && TelemetryCache::instance().isFresh(c->publicKey);
+
+                // Battery icon — telemetry only (no other source carries voltage).
+                if (telemFresh && td->hasVoltage &&
+                    (showTelem == "battery" || showTelem == "both")) {
+                    int pct = constrain((int)((td->voltage - 3.0f) / 1.2f * 100.0f), 0, 100);
+                    const char* battSym;
+                    if (pct > 80)      battSym = LV_SYMBOL_BATTERY_FULL;
+                    else if (pct > 60) battSym = LV_SYMBOL_BATTERY_3;
+                    else if (pct > 40) battSym = LV_SYMBOL_BATTERY_2;
+                    else if (pct > 20) battSym = LV_SYMBOL_BATTERY_1;
+                    else               battSym = LV_SYMBOL_BATTERY_EMPTY;
+                    lv_obj_t* battIcon = lv_label_create(topLine);
+                    lv_obj_set_style_text_font(battIcon, FONT_BODY, 0);
+                    lv_label_set_text(battIcon, battSym);
+                    lv_obj_set_style_text_color(battIcon,
+                        pct <= 20 ? theme::BATTERY_LOW : theme::TEXT_PRIMARY, 0);
+                }
+
+                // GPS icon — shown whenever we know *any* position for the contact
+                // (fresh telemetry, advert GPS, or a heard advert). White = "we
+                // know where they are"; precision/source detail lives in the modal.
+                if ((showTelem == "location" || showTelem == "both") &&
+                    bestKnownLocation(c->publicKey).valid) {
+                    lv_obj_t* locIcon = lv_label_create(topLine);
+                    lv_obj_set_style_text_font(locIcon, FONT_BODY, 0);
+                    lv_label_set_text(locIcon, LV_SYMBOL_GPS);
+                    lv_obj_set_style_text_color(locIcon, theme::TEXT_PRIMARY, 0);
                 }
             }
 

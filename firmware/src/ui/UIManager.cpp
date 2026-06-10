@@ -14,6 +14,7 @@
 #include "../i18n/I18n.h"
 #include "../storage/TelemetryCache.h"
 #include "../storage/TileLoader.h"
+#include "../util/ContactLocation.h"
 #ifdef PLATFORM_TWATCH
 #include "../hal/twatch/Pmu.h"
 #include "../hal/twatch/Haptic.h"
@@ -29,6 +30,10 @@
 #include <helpers/BaseChatMesh.h>  // RESP_SERVER_LOGIN_OK
 
 namespace mclite {
+
+// Defined below; forward-declared so the telemetry-timeout path (in update())
+// can rebuild the modal body with any fallback (advert/heard) position.
+static String buildTelemText(const Contact* contact, const TelemetryData* td);
 
 UIManager& UIManager::instance() {
     static UIManager inst;
@@ -167,11 +172,25 @@ void UIManager::update() {
 
     // Telemetry request timeout
     if (_telemPending && _telemMsgbox && (int32_t)(now - _telemTimeout) >= 0) {
-        _telemText = t("telem_no_response");
-        lv_label_set_text(lv_msgbox_get_text(_telemMsgbox), _telemText.c_str());
         _telemPending = false;
         _telemTimeout = 0;
         MeshManager::instance().clearPendingTelemetry();
+        // No telemetry reply — but still show any known (advert/heard) position
+        // instead of a bare "No response".
+        const Contact* c = nullptr;
+        auto& cs = ContactStore::instance();
+        for (size_t i = 0; i < cs.count(); i++) {
+            const Contact* cc = cs.findByIndex(i);
+            if (cc && cc->shortId() == _telemContactId) { c = cc; break; }
+        }
+        String body = c ? buildTelemText(c, TelemetryCache::instance().get(c->publicKey))
+                        : String();
+        if (body.length() && body != t("telem_no_data")) {
+            _telemText = String(t("telem_no_response")) + "\n" + body;
+        } else {
+            _telemText = t("telem_no_response");
+        }
+        lv_label_set_text(lv_msgbox_get_text(_telemMsgbox), _telemText.c_str());
     }
 
     // Periodic convo list refresh (update timestamps like "12s", "3m")
@@ -1391,12 +1410,10 @@ void UIManager::dismissPinLock() {
 // ---- Telemetry modal ----
 
 static String buildTelemText(const Contact* contact, const TelemetryData* td) {
-    if (!td) return String(t("telem_no_data"));
-
     String text;
-    bool stale = (millis() - td->receivedAt >= TelemetryCache::STALE_MS);
+    bool stale = td && (millis() - td->receivedAt >= TelemetryCache::STALE_MS);
 
-    if (td->hasVoltage) {
+    if (td && td->hasVoltage) {
         // Estimate percentage: 4.2V=100%, 3.0V=0% (linear approximation for LiPo)
         int pct = constrain((int)((td->voltage - 3.0f) / 1.2f * 100.0f), 0, 100);
         char buf[48];
@@ -1405,19 +1422,23 @@ static String buildTelemText(const Contact* contact, const TelemetryData* td) {
         text += "\n";
     }
 
-    if (td->hasLocation) {
+    // Location — fresh telemetry (accurate), else the contact's advert / heard
+    // position (precision unknown, prefixed "~" to flag it as approximate).
+    ContactLocation loc = bestKnownLocation(contact->publicKey);
+    if (loc.valid) {
         const auto& cfg = ConfigManager::instance().config();
         const String& fmt = cfg.messaging.locationFormat;
         String locStr;
         char latlonBuf[48];
-        snprintf(latlonBuf, sizeof(latlonBuf), "%.6f, %.6f", td->lat, td->lon);
+        snprintf(latlonBuf, sizeof(latlonBuf), "%.6f, %.6f", loc.lat, loc.lon);
         if (fmt == "mgrs") {
-            locStr = latLonToMGRS(td->lat, td->lon, 4);
+            locStr = latLonToMGRS(loc.lat, loc.lon, 4);
         } else if (fmt == "both") {
-            locStr = String(latlonBuf) + " (" + latLonToMGRS(td->lat, td->lon, 4) + ")";
+            locStr = String(latlonBuf) + " (" + latLonToMGRS(loc.lat, loc.lon, 4) + ")";
         } else {
             locStr = latlonBuf;
         }
+        if (loc.approximate) locStr = "~ " + locStr;   // advert/heard — may be coarse
 
         char lineBuf[96];
         snprintf(lineBuf, sizeof(lineBuf), t("telem_location"), locStr.c_str());
@@ -1430,7 +1451,7 @@ static String buildTelemText(const Contact* contact, const TelemetryData* td) {
         if (ourFix == FixStatus::LIVE || ourFix == FixStatus::LAST_KNOWN) {
             double ourLat = (ourFix == FixStatus::LIVE) ? gps.lat() : gps.lastPosition().lat;
             double ourLon = (ourFix == FixStatus::LIVE) ? gps.lon() : gps.lastPosition().lon;
-            double dist = haversineMeters(ourLat, ourLon, td->lat, td->lon);
+            double dist = haversineMeters(ourLat, ourLon, loc.lat, loc.lon);
             String distStr = formatDistance(dist);
             char distBuf[48];
             snprintf(distBuf, sizeof(distBuf), t("telem_distance"), distStr.c_str());
@@ -1439,7 +1460,7 @@ static String buildTelemText(const Contact* contact, const TelemetryData* td) {
         }
     }
 
-    if (td->hasTemperature || td->hasHumidity || td->hasPressure) {
+    if (td && (td->hasTemperature || td->hasHumidity || td->hasPressure)) {
         char envBuf[64];
         String envParts;
         if (td->hasTemperature) {
@@ -1464,22 +1485,25 @@ static String buildTelemText(const Contact* contact, const TelemetryData* td) {
         }
     }
 
-    // Update age
-    uint32_t ageSec = (millis() - td->receivedAt) / 1000;
-    char ageBuf[32];
-    if (ageSec < 60)       snprintf(ageBuf, sizeof(ageBuf), "%ds", (int)ageSec);
-    else if (ageSec < 3600) snprintf(ageBuf, sizeof(ageBuf), "%dm", (int)(ageSec / 60));
-    else                   snprintf(ageBuf, sizeof(ageBuf), "%dh", (int)(ageSec / 3600));
+    if (td) {
+        // Telemetry age
+        uint32_t ageSec = (millis() - td->receivedAt) / 1000;
+        char ageBuf[32];
+        if (ageSec < 60)       snprintf(ageBuf, sizeof(ageBuf), "%ds", (int)ageSec);
+        else if (ageSec < 3600) snprintf(ageBuf, sizeof(ageBuf), "%dm", (int)(ageSec / 60));
+        else                   snprintf(ageBuf, sizeof(ageBuf), "%dh", (int)(ageSec / 3600));
 
-    char updBuf[48];
-    snprintf(updBuf, sizeof(updBuf), t("telem_updated"), ageBuf);
-    text += updBuf;
+        char updBuf[48];
+        snprintf(updBuf, sizeof(updBuf), t("telem_updated"), ageBuf);
+        text += updBuf;
 
-    if (stale) {
-        text += "\n";
-        text += t("telem_stale");
+        if (stale) {
+            text += "\n";
+            text += t("telem_stale");
+        }
     }
 
+    if (text.length() == 0) return String(t("telem_no_data"));
     return text;
 }
 
@@ -1565,10 +1589,10 @@ void UIManager::telemBtnCb(lv_event_t* e) {
         for (size_t i = 0; i < contacts.count(); i++) {
             const Contact* c = contacts.findByIndex(i);
             if (c && c->shortId() == self->_telemContactId) {
-                const TelemetryData* td = TelemetryCache::instance().get(c->publicKey);
-                if (td && td->hasLocation) {
-                    self->_pendingMapLat  = td->lat;
-                    self->_pendingMapLon  = td->lon;
+                ContactLocation loc = bestKnownLocation(c->publicKey);
+                if (loc.valid) {
+                    self->_pendingMapLat  = loc.lat;
+                    self->_pendingMapLon  = loc.lon;
                     self->_pendingMapName = c->name;
                     memcpy(self->_pendingMapKey, c->publicKey, 32);
                     self->dismissTelemetryModal();
@@ -1608,10 +1632,8 @@ void UIManager::showGeneralMap() {
 
 bool UIManager::evalCanMap(const uint8_t* pubKey) const {
     if (!pubKey) return false;
-    const TelemetryData* td = TelemetryCache::instance().get(pubKey);
-    return td && td->hasLocation
-        && TelemetryCache::instance().isFresh(pubKey)
-        && TileLoader::instance().tilesAvailable();
+    // Any known position (telemetry, advert, or heard) — the map renders them all.
+    return bestKnownLocation(pubKey).valid && TileLoader::instance().tilesAvailable();
 }
 
 void UIManager::buildTelemetryMsgbox(bool canMap) {
