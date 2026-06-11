@@ -7,6 +7,18 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 
 ## [Unreleased]
 
+## [0.3.5] — 2026-06-11
+
+### Fixed
+- **Translations past ~128 keys reverted to English.** The i18n loader capped SD-loaded strings at 128, but the
+  language files now hold ~197 keys — so on German/French/Italian every key past the cap silently fell back to
+  English (e.g. `canned_5`–`8`, plus the offgrid / firmware-update / WiFi / USB / BLE / map / heard-adverts /
+  toast screens). Raised the cap to 256 and added a boot-time warning if a language file ever exceeds it.
+- **Config tool wiped stored WiFi on edit.** The tool's file-import never loaded the `wifi` section, so
+  importing a device's `config.json`, editing it, and re-exporting produced an empty `wifi` block — clearing
+  the device's stored SSID/password on the next copy to SD. WiFi (and the persisted BLE pairing PIN) now
+  round-trip correctly, including through the share-link and start-fresh paths.
+
 ## [0.3.4] — 2026-06-11
 
 ### Added
