@@ -240,6 +240,8 @@ void MeshManager::update() {
         if (_firstAdvert || now - _lastAdvertMs >= _advertIntervalMs) {
             _firstAdvert = false;
             const auto& cfg = ConfigManager::instance().config();
+            // Flood (default) on purpose: periodic adverts must reach the wider
+            // mesh via repeaters so peers can learn a return path to us.
             _mesh->advertise(cfg.deviceName.c_str());
             _lastAdvertMs = now;
         }
@@ -316,10 +318,10 @@ void MeshManager::clearPendingTelemetry() {
     if (_mesh) _mesh->clearPendingTelemetry();
 }
 
-bool MeshManager::sendAdvertNow() {
+bool MeshManager::sendAdvertNow(bool flood) {
     if (!_mesh || !_radioReady) return false;
     const auto& cfg = ConfigManager::instance().config();
-    bool ok = _mesh->advertise(cfg.deviceName.c_str());
+    bool ok = _mesh->advertise(cfg.deviceName.c_str(), flood);
     if (ok) {
         // Re-anchor the periodic schedule so the next automatic advert
         // is a full interval after this manual one.

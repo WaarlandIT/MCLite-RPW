@@ -90,8 +90,10 @@ public:
 
     // Send an advertisement immediately (user-triggered) and reset the
     // periodic timer so the next scheduled advert is a full interval out.
+    // flood = true (default) is mesh-wide — the on-device button; flood = false
+    // is zero-hop/local for the companion app's local-advert option.
     // Returns the underlying mesh send result.
-    bool sendAdvertNow();
+    bool sendAdvertNow(bool flood = true);
 
     static MeshManager& instance();
 

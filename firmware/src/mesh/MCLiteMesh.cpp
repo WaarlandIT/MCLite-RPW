@@ -279,7 +279,7 @@ void MCLiteMesh::loop() {
     checkTelemTimeout();
 }
 
-bool MCLiteMesh::advertise(const char* name) {
+bool MCLiteMesh::advertise(const char* name, bool flood) {
     if (!_ready) return false;
 
     // Optionally include our own location so we appear on others' maps. Opt-in
@@ -306,7 +306,15 @@ bool MCLiteMesh::advertise(const char* name) {
     }
     if (!pkt) return false;
 
-    sendWithScope(_globalScope, pkt, 0);
+    // Periodic adverts and the on-device button flood (mesh-wide) so repeaters
+    // relay us and peers learn a return path — that's the intended default.
+    // The companion app's "local advert" passes flood=false → zero-hop, which
+    // reaches only direct neighbours (no relaying, no route propagation).
+    if (flood) {
+        sendWithScope(_globalScope, pkt, 0);
+    } else {
+        sendZeroHop(pkt);
+    }
     return true;
 }
 

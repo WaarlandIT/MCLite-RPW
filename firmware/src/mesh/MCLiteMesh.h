@@ -76,8 +76,13 @@ public:
     // Main loop — call from MeshManager::update()
     void loop();
 
-    // Send advertisement (name only, no location)
-    bool advertise(const char* name);
+    // Send advertisement (name + optional opt-in location).
+    // flood = true (default) re-broadcasts mesh-wide via the global scope so
+    // repeaters relay it and the mesh learns a return path to us — this is what
+    // the periodic timer and the on-device advert button use, intentionally.
+    // flood = false sends zero-hop (neighbours only), used for the companion
+    // app's "local advert" option.
+    bool advertise(const char* name, bool flood = true);
 
     // Send DM — returns internal packetId, 0 on failure
     uint32_t sendDM(size_t contactIdx, const char* text, uint32_t timestamp,
