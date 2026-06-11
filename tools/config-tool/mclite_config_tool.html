@@ -2622,8 +2622,6 @@ body.v4 *::-webkit-scrollbar-thumb:hover { background: var(--shell-line-2); }
         </select>
         <div class="hint collapsible">Icons shown next to contacts on the conversation list.</div>
       </div>
-    </div>
-    <div class="row" style="margin-top:8px">
       <div class="field">
         <label>Auto-refresh Contact GPS<button type="button" class="info-icon" onclick="toggleHint(this)" aria-label="Toggle hint">i</button></label>
         <select id="msgAutoTelemetry">
@@ -3134,14 +3132,15 @@ function cannedOut(arr) {
   return cleaned.length ? cleaned : undefined;
 }
 function cannedRowHtml(coll, i, t, j) {
-  return `<div style="display:flex; gap:6px; align-items:center; margin-top:6px">
+  return `<div style="display:flex; gap:8px; align-items:center; margin-top:6px">
             <span style="color:var(--text3); font-size:0.75rem; min-width:1.2em; text-align:right">${j + 1}</span>
-            <input type="text" value="${esc(t)}" maxlength="160" style="flex:1"
-                   onchange="${coll}[${i}].canned[${j}]=this.value"
-                   placeholder="e.g. Open gate">
-            <button type="button" class="btn-remove" title="Remove reply" aria-label="Remove reply"
-                    style="font-size:1.2rem; line-height:1; padding:0 8px"
-                    onclick="removeCanned('${coll}', ${i}, ${j})">&times;</button>
+            <div class="field" style="flex:1; margin:0">
+              <input type="text" value="${esc(t)}" maxlength="160"
+                     onchange="${coll}[${i}].canned[${j}]=this.value"
+                     placeholder="e.g. Open gate">
+            </div>
+            <button type="button" class="btn-remove"
+                    onclick="removeCanned('${coll}', ${i}, ${j})">Remove</button>
           </div>`;
 }
 function cannedEditorHtml(coll, i, arr) {
