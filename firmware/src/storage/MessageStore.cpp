@@ -236,7 +236,7 @@ void MessageStore::updateRoomSyncSince(const ConvoId& id, uint32_t timestamp) {
 
 void MessageStore::pruneIfNeeded(Conversation& convo) {
     uint16_t maxHist = ConfigManager::instance().config().messaging.maxHistoryPerChat;
-    if (convo.messages.size() > maxHist) {
+    if (maxHist > 0 && convo.messages.size() > maxHist) {  // 0 = unlimited (matches loadHistory)
         size_t excess = convo.messages.size() - maxHist;
         convo.messages.erase(convo.messages.begin(), convo.messages.begin() + excess);
     }

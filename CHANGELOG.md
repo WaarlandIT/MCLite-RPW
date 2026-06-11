@@ -42,6 +42,13 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 - Messages that exceed the 160-**byte** limit (e.g. emoji or accented/non-Latin text — which can be ≤160
   *characters* but more bytes) are now refused with a "Message too long" toast that keeps your text, instead
   of silently failing to send while still drawing a (failed) bubble.
+- A timed-out telemetry request now releases the radio's single telemetry slot when the exchange ends
+  (previously the slot stayed held after a no-response request). Without this, **auto-refresh contact GPS**
+  would stall for the rest of the session after the first contact that didn't answer, and slow/multi-hop
+  contacts could be backed off too eagerly; both are resolved.
+- Auto-refresh no longer lets a single un-sendable contact block the rest of the round-robin, and
+  `max_history_per_chat: 0` now consistently means "unlimited" on both load and prune (previously prune at 0
+  would wipe the conversation).
 
 ## [0.3.3] — 2026-06-10
 

@@ -781,10 +781,20 @@ bool MCLiteMesh::requestTelemetry(size_t contactIdx, uint32_t& estTimeout) {
 }
 
 void MCLiteMesh::checkTelemTimeout() {
-    if (!_telemRetry.active || _telemRetry.retried) return;
+    if (!_telemRetry.active) return;
 
     uint32_t now = millis();
     if ((int32_t)(now - _telemRetry.timeoutMs) < 0) return;
+
+    // The flood retry already went out and also timed out with no reply:
+    // finalize the exchange and release the single-slot pending state. Without
+    // this the UI masks it via its own timeout (clearPendingTelemetry), but the
+    // background auto-refresh has no such timeout — a stuck _pendingTelemTag
+    // would make telemetryPending() true forever and block every future scan.
+    if (_telemRetry.retried) {
+        clearPendingTelemetry();
+        return;
+    }
 
     // If outbound queue still has packets, extend timeout instead of retrying.
     // Push the UI's parallel timeout out in lockstep — otherwise it fires this
@@ -818,8 +828,8 @@ void MCLiteMesh::checkTelemTimeout() {
         LOGF("[MCLiteMesh] Telemetry flood retry failed to %s\n", ci->name);
     }
 
-    // Give up
-    _telemRetry.active = false;
+    // Give up — release pending so the slot isn't held by a dead request.
+    clearPendingTelemetry();
 }
 static int lppTypeSize(uint8_t type) {
     switch (type) {

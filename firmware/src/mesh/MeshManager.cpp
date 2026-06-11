@@ -392,13 +392,14 @@ void MeshManager::tickAutoTelemetry() {
                               hasTelemGps, ageMs, defaults::AUTO_TELEM_REFRESH_AGE_MS)) continue;
 
         uint32_t est = 0;
+        _autoTelemNextIdx = i + 1;  // advance even on send failure, so a chronically
+                                    // unsendable contact can't starve the rest
         if (requestTelemetry(i, est)) {
             _autoTelemAwaitIdx        = (int)i;
             _autoTelemAwaitSentMs     = now;
             _autoTelemAwaitDeadlineMs = now + defaults::AUTO_TELEM_AWAIT_MS;
-            _autoTelemNextIdx         = i + 1;
         }
-        break;  // first due contact only; a failed send just retries next scan
+        break;  // one due contact per scan
     }
     _autoTelemLastScanMs = now;
 }
