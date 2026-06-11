@@ -22,6 +22,9 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 ### Changed
 - The device-info / admin screen is now fully localized — every row label routes through the translation
   table (de/fr/it) ([@jason-s13r](https://github.com/jason-s13r), #9).
+- Conversation history now loads only the most recent `max_history_per_chat` messages per chat at boot
+  (previously the whole file was loaded into RAM). Bounds memory if a history file is larger than the cap —
+  e.g. after lowering the setting. No visible change; the runtime cap was already in place.
 
 ### Fixed
 - Telemetry retry is no longer cancelled by the contact-info pop-up's own timeout when the mesh's outbound

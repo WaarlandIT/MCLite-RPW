@@ -80,7 +80,19 @@ void MessageStore::loadHistory(const ConvoId& id) {
         arr = doc.as<JsonArray>();
     }
 
+    // Cap to the most recent maxHistoryPerChat messages. History is stored
+    // oldest-first, so skip the leading (oldest) entries beyond the cap. This
+    // bounds the resident String copies in convo->messages — loadHistory runs
+    // for EVERY conversation at boot, so without this an oversized file (e.g.
+    // after lowering max_history_per_chat) would keep all of it in RAM. The
+    // runtime path stays capped via pruneIfNeeded().
+    const uint16_t cap = ConfigManager::instance().config().messaging.maxHistoryPerChat;
+    const size_t total = arr.size();
+    size_t skip = (cap > 0 && total > cap) ? total - cap : 0;
+    size_t idx = 0;
+
     for (JsonObject obj : arr) {
+        if (idx++ < skip) continue;  // drop oldest beyond the cap
         Message msg;
         const char* from = obj["from"] | "them";
         const String& myKey = ConfigManager::instance().config().publicKey;
