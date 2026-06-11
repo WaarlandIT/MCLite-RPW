@@ -3601,6 +3601,7 @@ async function ensureHashtagPSKs() {
 
 // ===== Identity =====
 let identity = { privateKey: '', publicKey: '' };
+let blePin = 0;  // device's persisted BLE pairing PIN (no UI field; preserved across edits)
 
 async function generateIdentity() {
   try {
@@ -3961,7 +3962,9 @@ function buildConfig() {
       ssid: document.getElementById('wifiSsid').value || '',
       password: document.getElementById('wifiPassword').value || '',
       auto_update: document.getElementById('wifiAutoUpdate').value === 'true'
-    }
+    },
+    // Preserve the device's persisted BLE pairing PIN (only emitted when set).
+    ...(blePin ? { ble: { pin: blePin } } : {})
   };
   return cfg;
 }
@@ -4199,7 +4202,8 @@ async function applyPresetFromUrl(b64) {
       always_sound: c.always_sound === true,
       allow_sos: c.allow_sos !== false,
       send_sos: c.send_sos !== false,
-      from_discovery: c.from_discovery === true
+      from_discovery: c.from_discovery === true,
+      canned: Array.isArray(c.canned) ? c.canned.slice(0, 8) : []
     }));
     renderContacts();
   }
@@ -4212,7 +4216,8 @@ async function applyPresetFromUrl(b64) {
       allow_sos: ch.allow_sos !== false,
       send_sos: ch.send_sos !== false,
       read_only: ch.read_only === true,
-      scope: ch.scope || ''
+      scope: ch.scope || '',
+      canned: Array.isArray(ch.canned) ? ch.canned.slice(0, 8) : []
     }));
     renderChannels();
   }
@@ -4224,7 +4229,8 @@ async function applyPresetFromUrl(b64) {
       allow_sos: r.allow_sos !== false,
       send_sos: r.send_sos === true,
       read_only: r.read_only === true,
-      scope: r.scope || ''
+      scope: r.scope || '',
+      canned: Array.isArray(r.canned) ? r.canned.slice(0, 8) : []
     }));
     renderRooms();
   }
@@ -4477,6 +4483,17 @@ function loadConfig(cfg) {
   document.getElementById('adminEnabled').value = String(cfg.security?.admin_enabled ?? true);
   document.getElementById('offgridEnabled').value = cfg.offgrid?.enabled ? 'true' : 'false';
   updateOffgridDerivedFreq();
+
+  // WiFi (OTA auto-update credentials). Must round-trip: without loading these,
+  // importing a config that has WiFi and re-exporting would write an empty wifi
+  // block and wipe the device's stored SSID/password.
+  document.getElementById('wifiSsid').value       = cfg.wifi?.ssid ?? '';
+  document.getElementById('wifiPassword').value   = cfg.wifi?.password ?? '';
+  document.getElementById('wifiAutoUpdate').value = cfg.wifi?.auto_update ? 'true' : 'false';
+  // Preserve the device's persisted BLE pairing PIN across an edit (no UI field;
+  // dropping it would force a re-pair). Re-emitted by buildConfig when non-zero.
+  blePin = cfg.ble?.pin ?? 0;
+
   toggleLockFields();
 
   // Warn about firmware limits
@@ -4491,6 +4508,7 @@ function loadConfig(cfg) {
 // toast when complete.
 async function applyDefaultsAndGenerate() {
   identity = { privateKey: '', publicKey: '' };
+  blePin = 0;
   contacts = [];
   channels = [];
   rooms = [];
@@ -5027,7 +5045,7 @@ async function wizStartFromScratch() {
 async function addDefaultHashtag() {
   const name = '#mclite';
   const psk = await deriveHashtagPSK(name);
-  channels.push({ name, type: 'hashtag', psk, index: channels.length, allow_sos: true, send_sos: false, read_only: false, scope: '' });
+  channels.push({ name, type: 'hashtag', psk, index: channels.length, allow_sos: true, send_sos: false, read_only: false, scope: '', canned: [] });
   renderChannels();
 }
 
