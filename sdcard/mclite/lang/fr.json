@@ -100,6 +100,7 @@
     "lbl_max_retries": "Max essais",
     "lbl_req_telemetry": "Dem. telemetrie",
     "lbl_telemetry_badges": "Badges telemetrie",
+    "lbl_auto_telemetry": "Auto GPS",
     "lbl_gps": "GPS",
     "lbl_hdop": "HDOP",
     "lbl_last_known_max": "Max derniere pos.",

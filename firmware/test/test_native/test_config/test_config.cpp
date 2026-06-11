@@ -383,6 +383,26 @@ void test_empty_canned_omitted_from_serialize() {
     TEST_ASSERT_NULL(strstr(json.c_str(), "\"canned\""));
 }
 
+// ═══ Auto-telemetry (auto-refresh contact GPS) ═══
+
+void test_auto_telemetry_defaults_true() {
+    parse("{}");
+    TEST_ASSERT_TRUE(cfg->config().messaging.autoTelemetry);
+}
+
+void test_auto_telemetry_explicit_false() {
+    parse("{\"messaging\":{\"auto_telemetry\": false}}");
+    TEST_ASSERT_FALSE(cfg->config().messaging.autoTelemetry);
+}
+
+void test_auto_telemetry_round_trips() {
+    parse("{\"messaging\":{\"auto_telemetry\": false}}");
+    String json = cfg->toJson();
+    cfg->config() = AppConfig{};
+    cfg->parseJson(json);
+    TEST_ASSERT_FALSE(cfg->config().messaging.autoTelemetry);
+}
+
 // ═══ Radio scope ═══
 
 void test_radio_scope_default_wildcard() {
@@ -693,6 +713,9 @@ int main() {
     RUN_TEST(test_canned_blanks_skipped_and_capped);
     RUN_TEST(test_canned_roundtrips_through_serialize);
     RUN_TEST(test_empty_canned_omitted_from_serialize);
+    RUN_TEST(test_auto_telemetry_defaults_true);
+    RUN_TEST(test_auto_telemetry_explicit_false);
+    RUN_TEST(test_auto_telemetry_round_trips);
 
     // Radio scope
     RUN_TEST(test_radio_scope_default_wildcard);

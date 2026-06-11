@@ -72,6 +72,7 @@ struct MessagingConfig {
     bool     cannedMessages   = true;    // Enable canned message quick-reply picker
     std::vector<String> cannedCustom;    // Optional custom texts from config array
     bool     allowMute        = false;   // Allow per-chat mute via long-press (off by default)
+    bool     autoTelemetry    = true;    // Periodically auto-refresh contacts' GPS via telemetry (default on)
 };
 
 struct BatteryConfig {

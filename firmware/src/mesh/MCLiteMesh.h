@@ -118,6 +118,14 @@ public:
     // Clear pending telemetry state (call on timeout)
     void clearPendingTelemetry() { _pendingTelemTag = 0; memset(_pendingTelemKey, 0, PUB_KEY_SIZE); _telemRetry.active = false; }
 
+    // True while a telemetry request (UI or auto) is awaiting a reply. Telemetry
+    // is single-slot, so the auto-refresh scheduler uses this to avoid clobbering
+    // a manual request and to serialize its own.
+    bool telemetryPending() const { return _pendingTelemTag != 0; }
+
+    // True if the radio's outbound packet queue still has packets pending.
+    bool outboundBusy() const;
+
     // Access contacts managed by BaseChatMesh
     ContactInfo* getContactByIdx(int idx);
 

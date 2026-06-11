@@ -127,6 +127,7 @@ const DefaultString DEFAULT_STRINGS[] = {
     {"lbl_max_retries",     "Max Retries"},
     {"lbl_req_telemetry",   "Req. Telemetry"},
     {"lbl_telemetry_badges","Telemetry Badges"},
+    {"lbl_auto_telemetry",  "Auto GPS Refresh"},
     {"lbl_gps",             "GPS"},
     {"lbl_hdop",            "HDOP"},
     {"lbl_last_known_max",  "Last Known Max"},

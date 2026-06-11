@@ -51,6 +51,7 @@
     "max_retries": 3,
     "request_telemetry": true,
     "show_telemetry": "both",
+    "auto_telemetry": true,
     "canned_messages": true,
     "allow_mute": false
   },

@@ -57,6 +57,7 @@ void ConfigManager::applyDefaults() {
     _config.messaging.cannedMessages   = defaults::CANNED_MESSAGES_ENABLED;
     _config.messaging.cannedCustom.clear();
     _config.messaging.allowMute        = defaults::ALLOW_MUTE;
+    _config.messaging.autoTelemetry    = defaults::AUTO_TELEMETRY;
     _config.soundEnabled = defaults::SOUND_ENABLED;
     _config.sosKeyword   = defaults::SOS_KEYWORD;
     _config.sosRepeat    = defaults::SOS_REPEAT;
@@ -254,6 +255,7 @@ bool ConfigManager::parseJson(const String& json) {
         }
 
         _config.messaging.allowMute = msg["allow_mute"] | defaults::ALLOW_MUTE;
+        _config.messaging.autoTelemetry = msg["auto_telemetry"] | defaults::AUTO_TELEMETRY;
     }
 
     // Sound
@@ -417,6 +419,7 @@ String ConfigManager::toJson() const {
     msg["show_telemetry"]       = _config.messaging.showTelemetry;
     msg["canned_messages"]      = _config.messaging.cannedMessages;
     msg["allow_mute"]           = _config.messaging.allowMute;
+    msg["auto_telemetry"]       = _config.messaging.autoTelemetry;
 
     doc["sound"]["enabled"]     = _config.soundEnabled;
     doc["sound"]["sos_keyword"] = _config.sosKeyword;

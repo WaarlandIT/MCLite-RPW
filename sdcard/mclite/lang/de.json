@@ -100,6 +100,7 @@
     "lbl_max_retries": "Max Wiederholungen",
     "lbl_req_telemetry": "Telemetrie anfr.",
     "lbl_telemetry_badges": "Telemetrie-Badges",
+    "lbl_auto_telemetry": "Auto-GPS-Abruf",
     "lbl_gps": "GPS",
     "lbl_hdop": "HDOP",
     "lbl_last_known_max": "Max. letzte Pos.",

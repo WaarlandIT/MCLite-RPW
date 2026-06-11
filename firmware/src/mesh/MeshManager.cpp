@@ -7,6 +7,8 @@
 #include "../config/ConfigManager.h"
 #include "../hal/GPS.h"
 #include "../util/TimeHelper.h"
+#include "../util/ContactLocation.h"
+#include "../util/AutoTelemetry.h"
 #include "../companion/CompanionService.h"
 
 #include <SPI.h>
@@ -247,6 +249,9 @@ void MeshManager::update() {
         }
     }
 
+    // Background GPS refresh for contacts who don't broadcast their location
+    tickAutoTelemetry();
+
     // Sample TX airtime every 60s for rolling duty cycle calculation
     {
         uint32_t now = millis();
@@ -329,6 +334,73 @@ bool MeshManager::sendAdvertNow(bool flood) {
         _firstAdvert  = false;
     }
     return ok;
+}
+
+bool MeshManager::isTelemetryPending() const {
+    return _mesh && _mesh->telemetryPending();
+}
+
+void MeshManager::tickAutoTelemetry() {
+    if (!ConfigManager::instance().config().messaging.autoTelemetry) return;
+
+    auto& contacts = ContactStore::instance();
+    auto& cache    = TelemetryCache::instance();
+    uint32_t now   = millis();
+
+    // 1) Resolve an outstanding auto-request before starting another (single-slot).
+    if (_autoTelemAwaitIdx >= 0) {
+        const Contact* c = contacts.findByIndex((size_t)_autoTelemAwaitIdx);
+        bool success = false;
+        if (c) {
+            const TelemetryData* td = cache.get(c->publicKey);
+            // receivedAt is monotonic millis(); a fix newer than our send = a reply to us.
+            success = td && td->hasLocation &&
+                      (int32_t)(td->receivedAt - _autoTelemAwaitSentMs) >= 0;
+        }
+        if (success) {
+            _autoTelemMisses[_autoTelemAwaitIdx] = 0;   // known sharer — keep refreshing
+            _autoTelemAwaitIdx = -1;
+        } else if (!isTelemetryPending() || (int32_t)(now - _autoTelemAwaitDeadlineMs) >= 0) {
+            // Pending cleared with no fix, or our window elapsed → a miss.
+            if (_autoTelemMisses[_autoTelemAwaitIdx] < 255) _autoTelemMisses[_autoTelemAwaitIdx]++;
+            _autoTelemAwaitIdx = -1;
+        }
+        return;  // one in flight at a time
+    }
+
+    // 2) Rate-limit scans.
+    if ((int32_t)(now - _autoTelemLastScanMs) < (int32_t)defaults::AUTO_TELEM_SCAN_MS) return;
+
+    // 3) Stay out of the way: yield to a manual/UI request, a busy queue, or duty cycle.
+    if (isTelemetryPending() || (_mesh && _mesh->outboundBusy())) return;
+    if (isEURegion() && getTxDutyCyclePercent() >= 10.0f) return;
+
+    // 4) Round-robin to the next due contact; send at most one request per scan.
+    size_t n = contacts.count();
+    if (n > (size_t)defaults::MAX_CHAT_CONTACTS) n = defaults::MAX_CHAT_CONTACTS;
+    for (size_t k = 0; k < n; k++) {
+        size_t i = (_autoTelemNextIdx + k) % n;
+        const Contact* c = contacts.findByIndex(i);
+        if (!c) continue;
+
+        const TelemetryData* td = cache.get(c->publicKey);
+        bool hasTelemGps = td && td->hasLocation;
+        uint32_t ageMs   = hasTelemGps ? (now - td->receivedAt) : 0;
+        bool gaveUp      = _autoTelemMisses[i] >= defaults::AUTO_TELEM_MAX_MISSES;
+
+        if (!autoTelemetryDue(advertisesLocation(c->publicKey), gaveUp,
+                              hasTelemGps, ageMs, defaults::AUTO_TELEM_REFRESH_AGE_MS)) continue;
+
+        uint32_t est = 0;
+        if (requestTelemetry(i, est)) {
+            _autoTelemAwaitIdx        = (int)i;
+            _autoTelemAwaitSentMs     = now;
+            _autoTelemAwaitDeadlineMs = now + defaults::AUTO_TELEM_AWAIT_MS;
+            _autoTelemNextIdx         = i + 1;
+        }
+        break;  // first due contact only; a failed send just retries next scan
+    }
+    _autoTelemLastScanMs = now;
 }
 
 float MeshManager::getTxDutyCyclePercent() const {

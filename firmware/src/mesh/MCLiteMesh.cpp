@@ -745,6 +745,10 @@ uint8_t MCLiteMesh::onContactRequest(const ContactInfo& contact, uint32_t sender
     return 4 + tlen;
 }
 
+bool MCLiteMesh::outboundBusy() const {
+    return _mgr && _mgr->getOutboundCount(_ms->getMillis()) > 0;
+}
+
 bool MCLiteMesh::requestTelemetry(size_t contactIdx, uint32_t& estTimeout) {
     if (!_ready) return false;
 

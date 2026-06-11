@@ -8,6 +8,10 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 ## [Unreleased]
 
 ### Added
+- **Auto-refresh contact GPS** — keeps the map markers / convo-list badges of contacts who *don't* broadcast
+  their own location fresh, by quietly re-requesting telemetry GPS before the cached fix goes stale. Throttled
+  (one request per scan, respects the EU duty cycle, yields to manual requests) and self-limiting (stops asking
+  a contact that doesn't answer). New setting `messaging.auto_telemetry`, **default on**, can be disabled.
 - **Per-conversation quick replies** — any contact, channel, or room can carry its own `canned` list (max 8)
   that overrides the global quick-reply list *for that chat only*; leave it empty to fall back to the global
   list. Editable per card in the config tool. Turns a conversation into a command menu — e.g. a Home Assistant

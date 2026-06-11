@@ -438,6 +438,7 @@ void AdminScreen::show() {
     addRow(t("lbl_max_retries"), String(cfg.messaging.maxRetries));
     addRow(t("lbl_req_telemetry"), cfg.messaging.requestTelemetry ? t("enabled") : t("disabled"));
     addRow(t("lbl_telemetry_badges"), cfg.messaging.showTelemetry);
+    addRow(t("lbl_auto_telemetry"), cfg.messaging.autoTelemetry ? t("on") : t("off"));
 
     // --- GPS ---
     addSection(t("sec_gps"));
