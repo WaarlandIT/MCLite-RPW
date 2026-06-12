@@ -2551,7 +2551,17 @@ body.v4 *::-webkit-scrollbar-thumb:hover { background: var(--shell-line-2); }
         <div class="error">1–255</div>
       </div>
     </div>
+    <div class="field">
+      <label>Boot Text (optional)<button type="button" class="info-icon" onclick="toggleHint(this)" aria-label="Toggle hint">i</button></label>
+      <input type="text" id="dispBootText" value="" maxlength="32" placeholder="e.g. Team Alpha">
+      <div class="hint collapsible">Shown on boot screen below version number. Max 32 characters.</div>
+    </div>
     <div class="row">
+      <div class="field">
+        <label>Language<button type="button" class="info-icon" onclick="toggleHint(this)" aria-label="Toggle hint">i</button></label>
+        <input type="text" id="language" value="" maxlength="5" placeholder="e.g. de, fr, es">
+        <div class="hint collapsible">Leave empty for English. Translation files (de, fr, it) are included in the export ZIP.</div>
+      </div>
       <div class="field">
         <label>Emoji Picker<button type="button" class="info-icon" onclick="toggleHint(this)" aria-label="Toggle hint">i</button></label>
         <select id="dispEmoji">
@@ -2560,16 +2570,6 @@ body.v4 *::-webkit-scrollbar-thumb:hover { background: var(--shell-line-2); }
         </select>
         <div class="hint collapsible">Show the emoji picker in chat for composing emoji. Received emoji always render either way. Default off.</div>
       </div>
-    </div>
-    <div class="field">
-      <label>Boot Text (optional)<button type="button" class="info-icon" onclick="toggleHint(this)" aria-label="Toggle hint">i</button></label>
-      <input type="text" id="dispBootText" value="" maxlength="32" placeholder="e.g. Team Alpha">
-      <div class="hint collapsible">Shown on boot screen below version number. Max 32 characters.</div>
-    </div>
-    <div class="field">
-      <label>Language<button type="button" class="info-icon" onclick="toggleHint(this)" aria-label="Toggle hint">i</button></label>
-      <input type="text" id="language" value="" maxlength="5" placeholder="e.g. de, fr, es">
-      <div class="hint collapsible">Leave empty for English. Translation files (de, fr, it) are included in the export ZIP.</div>
     </div>
   </div>
 
@@ -5917,6 +5917,19 @@ maybeShowWizard();
     if (idSection) {
       idSection.classList.toggle('has-id', !!(typeof identity !== 'undefined' && identity.publicKey && identity.privateKey));
     }
+
+    // ===== WiFi (optional) — green when an SSID is configured =====
+    const wifiSsid = (document.getElementById('wifiSsid') || {}).value || '';
+    const wifiAuto = (document.getElementById('wifiAutoUpdate') || {}).value === 'true';
+    if (wifiSsid.trim()) {
+      elevate('wifi', 'ok');
+    } else if (wifiAuto) {
+      // Auto-update is on but no network to reach it on.
+      issues.push('WiFi: auto-update needs an SSID');
+      elevate('wifi', 'warn');
+      markStatic('wifiSsid');
+    }
+    // (blank SSID + no auto-update = WiFi off, intentionally left untouched/gray)
 
     // ===== 3. Channels =====
     const chCount = (typeof channels !== 'undefined') ? channels.length : 0;
