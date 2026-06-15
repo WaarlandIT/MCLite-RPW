@@ -117,7 +117,8 @@ private:
     OnRoomLoginCallback   _onRoomLogin;
 
     // Advertisement
-    uint32_t _advertIntervalMs = 540000;  // Default: every 9 minutes (under 10-min "recently seen" threshold)
+    uint32_t _advertIntervalMs = 0;  // Periodic flood-advert interval (ms). 0 = off (default; boot advert
+                                     // only). Set from radio.advert_interval_min — see issue #13.
     uint32_t _lastAdvertMs     = 0;
     bool     _firstAdvert      = true;   // Send first advert immediately on boot
 

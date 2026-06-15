@@ -235,6 +235,7 @@ const DefaultString DEFAULT_STRINGS[] = {
     {"heard_buffer_full",   "Contact list full (32/32)"},
     {"heard_status_queued", "Queued -- applies on next boot"},
     {"heard_advert_sent",   "Advert sent"},
+    {"heard_advert_sent_local", "Local advert sent"},
 
     // Mute / unmute chat
     {"toast_muted",         "Chat muted"},

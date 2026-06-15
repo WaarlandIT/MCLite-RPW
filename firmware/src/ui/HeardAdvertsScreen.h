@@ -21,6 +21,7 @@ private:
     lv_obj_t* _backBtn    = nullptr;
     lv_obj_t* _clearBtn   = nullptr;
     lv_obj_t* _advertBtn  = nullptr;
+    lv_obj_t* _localBtn   = nullptr;
 
     // Detail modal state — only one open at a time
     lv_obj_t* _detailMsgbox = nullptr;
@@ -43,6 +44,7 @@ private:
     static void backBtnCb(lv_event_t* e);
     static void clearBtnCb(lv_event_t* e);
     static void advertBtnCb(lv_event_t* e);
+    static void localBtnCb(lv_event_t* e);
     static void rowClickCb(lv_event_t* e);
     static void detailBtnCb(lv_event_t* e);
 

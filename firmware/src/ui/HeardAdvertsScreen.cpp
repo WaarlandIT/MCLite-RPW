@@ -166,7 +166,8 @@ void HeardAdvertsScreen::create(lv_obj_t* parent) {
     };
 
     _clearBtn  = makeIconBtn(LV_SYMBOL_TRASH,  clearBtnCb,  this);
-    _advertBtn = makeIconBtn(LV_SYMBOL_UPLOAD, advertBtnCb, this);
+    _advertBtn = makeIconBtn(LV_SYMBOL_UPLOAD, advertBtnCb, this);  // flood (mesh-wide)
+    _localBtn  = makeIconBtn(LV_SYMBOL_HOME,   localBtnCb,  this);  // zero-hop (neighbours)
 
     // Content area — scrollable list container
     lv_obj_t* cont = lv_win_get_content(_screen);
@@ -224,6 +225,7 @@ void HeardAdvertsScreen::hide() {
             lv_group_remove_obj(lv_obj_get_child(_list, i));
         }
         lv_group_remove_obj(_advertBtn);
+        lv_group_remove_obj(_localBtn);
         lv_group_remove_obj(_clearBtn);
         lv_group_remove_obj(_backBtn);
     }
@@ -263,6 +265,7 @@ void HeardAdvertsScreen::rebuild() {
             lv_group_remove_obj(lv_obj_get_child(_list, i));
         }
         lv_group_remove_obj(_advertBtn);
+        lv_group_remove_obj(_localBtn);
         lv_group_remove_obj(_clearBtn);
         lv_group_remove_obj(_backBtn);
     }
@@ -270,6 +273,7 @@ void HeardAdvertsScreen::rebuild() {
     // ran a screen transition before LVGL dispatched the release event;
     // FOCUSED can linger across show/hide cycles in some LVGL paths.
     lv_obj_clear_state(_advertBtn, LV_STATE_FOCUSED | LV_STATE_PRESSED);
+    lv_obj_clear_state(_localBtn, LV_STATE_FOCUSED | LV_STATE_PRESSED);
     lv_obj_clear_state(_clearBtn, LV_STATE_FOCUSED | LV_STATE_PRESSED);
     lv_obj_clear_state(_backBtn, LV_STATE_FOCUSED | LV_STATE_PRESSED);
     lv_obj_clean(_list);
@@ -281,6 +285,7 @@ void HeardAdvertsScreen::rebuild() {
         if (grp) {
             lv_group_add_obj(grp, _backBtn);
             lv_group_add_obj(grp, _advertBtn);
+            lv_group_add_obj(grp, _localBtn);
             lv_group_focus_obj(_backBtn);
         }
         return;
@@ -389,6 +394,7 @@ void HeardAdvertsScreen::rebuild() {
         lv_group_add_obj(grp, _backBtn);
         lv_group_add_obj(grp, _clearBtn);
         lv_group_add_obj(grp, _advertBtn);
+        lv_group_add_obj(grp, _localBtn);
 
         // Restore focus by pubkey if possible; otherwise top row, otherwise back button
         bool restored = false;
@@ -595,6 +601,18 @@ void HeardAdvertsScreen::advertBtnCb(lv_event_t* e) {
     self->_lastAdvertTapMs = now;
     if (MeshManager::instance().sendAdvertNow()) {
         UIManager::instance().showToast(t("heard_advert_sent"));
+    }
+}
+
+void HeardAdvertsScreen::localBtnCb(lv_event_t* e) {
+    HeardAdvertsScreen* self = (HeardAdvertsScreen*)lv_event_get_user_data(e);
+    if (!self) return;
+    // Zero-hop advert — neighbours only, no flood. Shares the 4 s tap window.
+    uint32_t now = millis();
+    if (now - self->_lastAdvertTapMs < 4000) return;
+    self->_lastAdvertTapMs = now;
+    if (MeshManager::instance().sendAdvertNow(false)) {
+        UIManager::instance().showToast(t("heard_advert_sent_local"));
     }
 }
 

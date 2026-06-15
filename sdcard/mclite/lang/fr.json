@@ -210,6 +210,7 @@
     "heard_buffer_full": "Liste de contacts pleine (32/32)",
     "heard_status_queued": "En attente -- actif au prochain demarrage",
     "heard_advert_sent": "Advert envoye",
+    "heard_advert_sent_local": "Advert local envoye",
     "toast_muted": "Chat en sourdine",
     "toast_unmuted": "Sourdine desactivee",
     "screenshot_saved": "Capture enregistree",

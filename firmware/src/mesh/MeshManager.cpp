@@ -219,6 +219,9 @@ bool MeshManager::init() {
         : cfg.radio.frequency;
     _mesh->setFrequency(activeFreq);
 
+    // Opt-in periodic flood-advert interval (default 0 = off; boot advert only).
+    setAdvertInterval((uint32_t)cfg.radio.advertIntervalMin * 60000UL);
+
     if (!_mesh->begin(cfg.deviceName.c_str())) {
         LOGLN("[Mesh] Mesh begin failed");
         delete _mesh;
@@ -236,15 +239,22 @@ void MeshManager::update() {
     // Process radio I/O, incoming packets, ACK timeouts
     _mesh->loop();
 
-    // Periodic advertisement (first one fires immediately on boot)
-    if (_advertIntervalMs > 0) {
+    // Adverts. One flood advert on boot so repeaters/peers can learn a return
+    // path to us. Periodic re-adverts are OFF by default — a periodic flood timer
+    // spams established meshes (issue #13); MeshCore clients don't run one. An
+    // opt-in interval (radio.advert_interval_min, >=60) re-enables it for
+    // ad-hoc / SAR / private meshes. Otherwise users advertise on demand via the
+    // Heard Adverts screen (flood or zero-hop).
+    {
         uint32_t now = millis();
-        if (_firstAdvert || now - _lastAdvertMs >= _advertIntervalMs) {
+        if (_firstAdvert) {
             _firstAdvert = false;
             const auto& cfg = ConfigManager::instance().config();
-            // Flood (default) on purpose: periodic adverts must reach the wider
-            // mesh via repeaters so peers can learn a return path to us.
-            _mesh->advertise(cfg.deviceName.c_str());
+            _mesh->advertise(cfg.deviceName.c_str());   // flood, once
+            _lastAdvertMs = now;
+        } else if (_advertIntervalMs > 0 && now - _lastAdvertMs >= _advertIntervalMs) {
+            const auto& cfg = ConfigManager::instance().config();
+            _mesh->advertise(cfg.deviceName.c_str());   // opt-in periodic flood
             _lastAdvertMs = now;
         }
     }

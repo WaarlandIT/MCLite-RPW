@@ -32,6 +32,7 @@ constexpr int8_t   RADIO_TX_POWER        = 22;
 constexpr uint8_t  RADIO_CODING_RATE     = 8;
 constexpr const char* RADIO_SCOPE        = "*";  // No transport codes (wildcard)
 constexpr uint8_t  RADIO_PATH_HASH_MODE  = 0;    // 0=1B/hop (legacy), 1=2B/hop, 2=3B/hop
+constexpr uint16_t RADIO_ADVERT_INTERVAL_MIN = 0; // Periodic flood-advert interval (min). 0 = off (default)
 
 // Contacts — must stay <= MAX_CONTACTS - MAX_ROOMS from platformio.ini (40 - 8 = 32).
 // Save-to-contacts refuses to append when this is reached.

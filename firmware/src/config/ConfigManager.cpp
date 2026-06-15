@@ -42,6 +42,7 @@ void ConfigManager::applyDefaults() {
     _config.radio.codingRate      = defaults::RADIO_CODING_RATE;
     _config.radio.scope           = defaults::RADIO_SCOPE;
     _config.radio.pathHashMode    = defaults::RADIO_PATH_HASH_MODE;
+    _config.radio.advertIntervalMin = defaults::RADIO_ADVERT_INTERVAL_MIN;
     _config.display.brightness    = defaults::DISPLAY_BRIGHTNESS;
     _config.display.autoDimSeconds = defaults::AUTO_DIM_SECONDS;
     _config.display.theme         = "dark";
@@ -116,6 +117,15 @@ bool ConfigManager::parseJson(const String& json) {
         _config.radio.pathHashMode    = radio["path_hash_mode"] | defaults::RADIO_PATH_HASH_MODE;
         if (_config.radio.pathHashMode > 2)
             _config.radio.pathHashMode = defaults::RADIO_PATH_HASH_MODE;
+
+        // Periodic flood-advert interval. 0 = off (default). When enabled, enforce a
+        // 1-hour floor (never more frequent than hourly) up to a 1-week cap — periodic
+        // flood adverts spam shared meshes (issue #13).
+        _config.radio.advertIntervalMin = radio["advert_interval_min"] | defaults::RADIO_ADVERT_INTERVAL_MIN;
+        if (_config.radio.advertIntervalMin != 0) {
+            if (_config.radio.advertIntervalMin < 60)    _config.radio.advertIntervalMin = 60;
+            if (_config.radio.advertIntervalMin > 10080) _config.radio.advertIntervalMin = 10080;
+        }
     }
 
     // Identity
@@ -354,6 +364,9 @@ String ConfigManager::toJson() const {
     }
     if (_config.radio.pathHashMode != defaults::RADIO_PATH_HASH_MODE) {
         radio["path_hash_mode"] = _config.radio.pathHashMode;
+    }
+    if (_config.radio.advertIntervalMin != 0) {
+        radio["advert_interval_min"] = _config.radio.advertIntervalMin;
     }
 
     doc["identity"]["private_key"] = _config.privateKey;

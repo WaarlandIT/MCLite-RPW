@@ -7,6 +7,20 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 
 ## [Unreleased]
 
+### Changed
+- **No more periodic flood adverts by default** (issue #13). MCLite previously broadcast a mesh-wide flood
+  advert every ~9 minutes, which congests established meshes (one device was measured generating ~half of all
+  adverts on a 110-repeater network). Now the device sends a single flood advert **on boot** and otherwise only
+  advertises **on demand** — matching how stock MeshCore clients behave. Inbound reachability relies on
+  MeshCore's flood-route discovery + the existing flood-retry. Thanks to @stucamp (#13) and @jason-s13r.
+- **Opt-in periodic advert** — a new `radio.advert_interval_min` config field (config tool → Radio) re-enables
+  periodic flood adverts for ad-hoc / SAR / private meshes. **Default 0 = off**; if set, enforced to ≥60 min
+  (1-hour floor) — 720 (12 h) recommended, like a repeater.
+
+### Added
+- **Zero-hop "Local" advert button** on the Heard Adverts screen (alongside the existing flood/mesh-wide one) —
+  announce yourself to immediate neighbours without flooding the whole mesh.
+
 ## [0.3.7] — 2026-06-15
 
 ### Added

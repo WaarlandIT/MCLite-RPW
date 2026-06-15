@@ -443,6 +443,41 @@ void test_debug_screenshots_round_trips() {
     TEST_ASSERT_TRUE(cfg->config().debug.screenshots);
 }
 
+// ═══ Radio: periodic advert interval ═══
+
+void test_advert_interval_defaults_off() {
+    parse("{}");
+    TEST_ASSERT_EQUAL_UINT16(0, cfg->config().radio.advertIntervalMin);
+}
+
+void test_advert_interval_zero_stays_off() {
+    parse("{\"radio\":{\"advert_interval_min\": 0}}");
+    TEST_ASSERT_EQUAL_UINT16(0, cfg->config().radio.advertIntervalMin);
+}
+
+void test_advert_interval_parsed() {
+    parse("{\"radio\":{\"advert_interval_min\": 720}}");
+    TEST_ASSERT_EQUAL_UINT16(720, cfg->config().radio.advertIntervalMin);
+}
+
+void test_advert_interval_floor_one_hour() {
+    parse("{\"radio\":{\"advert_interval_min\": 30}}");
+    TEST_ASSERT_EQUAL_UINT16(60, cfg->config().radio.advertIntervalMin);
+}
+
+void test_advert_interval_week_cap() {
+    parse("{\"radio\":{\"advert_interval_min\": 20000}}");
+    TEST_ASSERT_EQUAL_UINT16(10080, cfg->config().radio.advertIntervalMin);
+}
+
+void test_advert_interval_round_trips() {
+    parse("{\"radio\":{\"advert_interval_min\": 720}}");
+    String json = cfg->toJson();
+    cfg->config() = AppConfig{};
+    cfg->parseJson(json);
+    TEST_ASSERT_EQUAL_UINT16(720, cfg->config().radio.advertIntervalMin);
+}
+
 // ═══ Radio scope ═══
 
 void test_radio_scope_default_wildcard() {
@@ -762,6 +797,12 @@ int main() {
     RUN_TEST(test_debug_screenshots_defaults_false);
     RUN_TEST(test_debug_screenshots_explicit_true);
     RUN_TEST(test_debug_screenshots_round_trips);
+    RUN_TEST(test_advert_interval_defaults_off);
+    RUN_TEST(test_advert_interval_zero_stays_off);
+    RUN_TEST(test_advert_interval_parsed);
+    RUN_TEST(test_advert_interval_floor_one_hour);
+    RUN_TEST(test_advert_interval_week_cap);
+    RUN_TEST(test_advert_interval_round_trips);
 
     // Radio scope
     RUN_TEST(test_radio_scope_default_wildcard);

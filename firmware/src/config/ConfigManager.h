@@ -50,6 +50,8 @@ struct RadioConfig {
     uint8_t codingRate      = 8;
     String  scope           = "*";  // Region scope ("*" = no transport codes, "#name" = region)
     uint8_t pathHashMode    = 0;    // 0/1/2 → 1/2/3 bytes per repeater hash in path
+    uint16_t advertIntervalMin = 0; // Periodic flood-advert interval in minutes. 0 = off (default).
+                                    // Off avoids spamming shared meshes (issue #13); if set, >=60.
 };
 
 struct DisplayConfig {
