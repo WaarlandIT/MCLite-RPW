@@ -239,6 +239,10 @@ const DefaultString DEFAULT_STRINGS[] = {
     {"toast_muted",         "Chat muted"},
     {"toast_unmuted",       "Chat unmuted"},
 
+    // Screenshot (debug.screenshots)
+    {"screenshot_saved",    "Screenshot saved"},
+    {"screenshot_failed",   "Screenshot failed"},
+
     {nullptr, nullptr}  // sentinel
 };
 

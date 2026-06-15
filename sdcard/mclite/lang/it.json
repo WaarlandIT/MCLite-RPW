@@ -210,5 +210,7 @@
     "heard_status_queued": "In attesa -- attivo al prossimo riavvio",
     "heard_advert_sent": "Advert inviato",
     "toast_muted": "Chat silenziata",
-    "toast_unmuted": "Silenziamento disattivato"
+    "toast_unmuted": "Silenziamento disattivato",
+    "screenshot_saved": "Screenshot salvato",
+    "screenshot_failed": "Screenshot fallito"
 }

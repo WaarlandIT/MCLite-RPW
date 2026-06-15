@@ -79,9 +79,6 @@ public:
     enum SetupReason { NO_SD, NO_CONFIG, CONFIG_ERROR };
     void showSetupScreen(SetupReason reason);
 
-    // Insert GPS location into chat
-    void insertLocation();
-
     // SOS send via trackball long-press (call from main loop)
     void updateSOSHold();
 
@@ -149,6 +146,7 @@ private:
     uint32_t  _lastStatusUpdate = 0;
     uint32_t  _lastDimCheck = 0;
     uint32_t  _lastActivity = 0;
+    uint32_t  _pekLastMs = 0;       // T-Watch PEK short-press time (double-press → screenshot)
     bool      _dimmed = false;
 
     static constexpr uint32_t STATUS_UPDATE_MS   = 1000;

@@ -423,6 +423,26 @@ void test_emoji_round_trips() {
     TEST_ASSERT_FALSE(cfg->config().display.emoji);
 }
 
+// ═══ Debug: screenshots ═══
+
+void test_debug_screenshots_defaults_false() {
+    parse("{}");
+    TEST_ASSERT_FALSE(cfg->config().debug.screenshots);
+}
+
+void test_debug_screenshots_explicit_true() {
+    parse("{\"debug\":{\"screenshots\": true}}");
+    TEST_ASSERT_TRUE(cfg->config().debug.screenshots);
+}
+
+void test_debug_screenshots_round_trips() {
+    parse("{\"debug\":{\"screenshots\": true}}");
+    String json = cfg->toJson();
+    cfg->config() = AppConfig{};
+    cfg->parseJson(json);
+    TEST_ASSERT_TRUE(cfg->config().debug.screenshots);
+}
+
 // ═══ Radio scope ═══
 
 void test_radio_scope_default_wildcard() {
@@ -739,6 +759,9 @@ int main() {
     RUN_TEST(test_emoji_defaults_true);
     RUN_TEST(test_emoji_explicit_false);
     RUN_TEST(test_emoji_round_trips);
+    RUN_TEST(test_debug_screenshots_defaults_false);
+    RUN_TEST(test_debug_screenshots_explicit_true);
+    RUN_TEST(test_debug_screenshots_round_trips);
 
     // Radio scope
     RUN_TEST(test_radio_scope_default_wildcard);

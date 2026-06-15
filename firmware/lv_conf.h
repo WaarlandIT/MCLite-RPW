@@ -98,4 +98,7 @@
 /* Scroll */
 #define LV_USE_OBJ_SCROLL 1
 
+/* Others */
+#define LV_USE_SNAPSHOT 1   /* screen capture to SD (gated by debug.screenshots) */
+
 #endif /* LV_CONF_H */

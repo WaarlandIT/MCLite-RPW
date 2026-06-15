@@ -210,5 +210,7 @@
     "heard_status_queued": "Wartet -- aktiv nach Neustart",
     "heard_advert_sent": "Advert gesendet",
     "toast_muted": "Chat stummgeschaltet",
-    "toast_unmuted": "Stummschaltung aufgehoben"
+    "toast_unmuted": "Stummschaltung aufgehoben",
+    "screenshot_saved": "Screenshot gespeichert",
+    "screenshot_failed": "Screenshot fehlgeschlagen"
 }

@@ -103,6 +103,10 @@ struct BleConfig {
                                  // a random 6-digit PIN on first use and persist it.
 };
 
+struct DebugConfig {
+    bool screenshots = false;    // Enable save-screen-to-SD (/screenshots/*.bmp). Debug aid, default off.
+};
+
 struct AppConfig {
     String          deviceName;
     String          language;    // "" = English, "de" = German, etc.
@@ -127,6 +131,7 @@ struct AppConfig {
     OffgridConfig   offgrid;
     WiFiConfig      wifi;
     BleConfig       ble;
+    DebugConfig     debug;
 };
 
 class ConfigManager {

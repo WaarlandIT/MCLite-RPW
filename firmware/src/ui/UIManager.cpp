@@ -15,6 +15,7 @@
 #include "../storage/TelemetryCache.h"
 #include "../storage/TileLoader.h"
 #include "../util/ContactLocation.h"
+#include "Screenshot.h"
 #ifdef PLATFORM_TWATCH
 #include "../hal/twatch/Pmu.h"
 #include "../hal/twatch/Haptic.h"
@@ -129,6 +130,13 @@ void UIManager::update() {
         if (_currentScreen == Screen::ADMIN) goHome();
         else                                  showScreen(Screen::ADMIN);
         _lastActivity = now;
+        // Double short-press → screenshot (gated by debug.screenshots). The two
+        // Admin toggles cancel out, so you land back on the original screen and
+        // the capture grabs it. Single press stays instant (no added latency).
+        if (now - _pekLastMs < 500 && ConfigManager::instance().config().debug.screenshots) {
+            Screenshot::capture();
+        }
+        _pekLastMs = now;
     }
 #endif
 
@@ -950,17 +958,6 @@ void UIManager::showSetupScreen(SetupReason reason) {
     LOGF("[UI] Setup screen shown (reason=%d)\n", (int)reason);
 }
 
-void UIManager::insertLocation() {
-    if (_currentScreen != Screen::CHAT) return;
-    auto& gps = GPS::instance();
-    if (gps.fixStatus() == FixStatus::NO_FIX) return;
-
-    String loc = "@ " + gps.formatLocationWithStatus();
-    const ConvoId* id = _chatScreen.currentConvo();
-    if (id) {
-        handleSend(*id, loc);
-    }
-}
 
 void UIManager::updateSOSHold() {
     if (_keyLocked) {

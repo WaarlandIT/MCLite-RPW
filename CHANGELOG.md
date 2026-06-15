@@ -14,6 +14,10 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
   tiles are present on SD (same rule as the telemetry Map button). One link per message — a "both"-format
   position links the decimal. Adds a reverse MGRS→lat/lon parser (`util/mgrs.h`) and a coordinate detector
   (`util/coordparse.h`), both unit-tested.
+- **Screenshot to SD** (debug aid, off by default). With `debug.screenshots` enabled in config, capture the
+  current screen to `/screenshots/*.bmp` (24-bit BMP, opens on any PC) — **T-Deck: Sym+$**; **T-Watch:
+  double-press the side (PEK) button**. Uses LVGL's snapshot into a PSRAM buffer; a toast confirms the save.
+  (Overlays on the top layer — toasts/PIN/SOS — aren't captured.)
 
 ## [0.3.6] — 2026-06-12
 

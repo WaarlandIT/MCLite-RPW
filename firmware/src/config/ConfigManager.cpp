@@ -73,6 +73,7 @@ void ConfigManager::applyDefaults() {
     _config.security.pinCode      = defaults::PIN_CODE;
     _config.security.autoLock     = defaults::AUTO_LOCK;
     _config.security.adminEnabled = defaults::ADMIN_ENABLED;
+    _config.debug.screenshots     = defaults::SCREENSHOTS_ENABLED;
     _config.language = defaults::LANGUAGE;
 }
 
@@ -323,6 +324,9 @@ bool ConfigManager::parseJson(const String& json) {
 
     _config.ble.pin = doc["ble"]["pin"] | 0u;   // 0 = auto-generate on first BLE use
 
+    // Debug — missing block defaults to all-off
+    _config.debug.screenshots = doc["debug"]["screenshots"] | defaults::SCREENSHOTS_ENABLED;
+
     LOGF("[Config] Loaded: device=%s, contacts=%d, channels=%d\n",
                   _config.deviceName.c_str(),
                   _config.contacts.size(),
@@ -455,6 +459,11 @@ String ConfigManager::toJson() const {
     // BLE — emit the persisted pairing PIN once one has been generated.
     if (_config.ble.pin != 0) {
         doc["ble"]["pin"] = _config.ble.pin;
+    }
+
+    // Debug — only emit when something is enabled (keeps the file clean by default).
+    if (_config.debug.screenshots) {
+        doc["debug"]["screenshots"] = _config.debug.screenshots;
     }
 
     String output;

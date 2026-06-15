@@ -93,6 +93,7 @@ constexpr const char* LOCK_MODE          = "key";   // "none", "key", "pin"
 constexpr const char* PIN_CODE           = "";
 constexpr const char* AUTO_LOCK          = "key";   // "none", "key", "pin"
 constexpr bool     ADMIN_ENABLED         = true;
+constexpr bool     SCREENSHOTS_ENABLED   = false;  // debug.screenshots — save-screen-to-SD, off by default
 
 // Language
 constexpr const char* LANGUAGE = "";  // "" = English (default)

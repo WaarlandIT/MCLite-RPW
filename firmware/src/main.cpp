@@ -15,6 +15,7 @@
 #include "mesh/ChannelStore.h"
 #include "storage/MessageStore.h"
 #include "ui/UIManager.h"
+#include "ui/Screenshot.h"
 #include "i18n/I18n.h"
 #include "storage/TelemetryCache.h"
 #include "util/TimeHelper.h"
@@ -411,6 +412,15 @@ static void handleKeyShortcuts() {
         return;
     }
 
+    // Screenshot — global on any screen, gated by debug.screenshots.
+    // Sym+$ on the T-Deck keyboard emits 0x04 (a control code, so it never
+    // collides with normal typing).
+    if (key == 0x04 && ConfigManager::instance().config().debug.screenshots) {
+        Screenshot::capture();
+        IInput::instance().clearKey();
+        return;
+    }
+
     if (key == 0x1B && ui.currentScreen() != Screen::CONVO_LIST) {
         ui.goHome();
         IInput::instance().clearKey();
@@ -428,11 +438,6 @@ static void handleKeyShortcuts() {
         if (idx < convos.size()) {
             ui.openChat(convos[idx]->convoId);
         }
-        IInput::instance().clearKey();
-        return;
-    }
-    if (key == 0x0C && ui.currentScreen() == Screen::CHAT) {
-        ui.insertLocation();
         IInput::instance().clearKey();
         return;
     }
