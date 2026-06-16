@@ -432,7 +432,9 @@ void HeardAdvertsScreen::rebuild() {
         }
     }
 
-    // Group: trackball cycles rows → back → clear → advert → rows
+    // Group: trackball cycles each row's per-row buttons (info, + map when the
+    // node has GPS) → back → clear → advert → local → back to the row buttons.
+    // The row containers themselves aren't group members; the buttons are.
     if (grp) {
         lv_group_add_obj(grp, _backBtn);
         lv_group_add_obj(grp, _clearBtn);

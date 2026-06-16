@@ -5,6 +5,13 @@ All notable changes to MCLite are documented here. The format is loosely based o
 
 Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-watch-vX.Y.Z.bin`).
 
+## [Unreleased]
+
+### Added
+- **Per-row Info + Map buttons on the Heard Adverts screen.** Each heard node now has an explicit info (eye)
+  button that opens its detail dialog, and — when the advert carries a location — a map button that opens the
+  map centered on that node. Back now returns to the Admin screen. Thanks [@jason-s13r](https://github.com/jason-s13r) (#15).
+
 ## [0.3.8] — 2026-06-16
 
 ### Added
