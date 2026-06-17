@@ -39,6 +39,7 @@
   "room_servers": [],
   "display": {
     "brightness": 180,
+    "theme": "dark",
     "auto_dim_seconds": 30,
     "dim_brightness": 20,
     "kbd_backlight": true,

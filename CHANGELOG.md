@@ -8,6 +8,10 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 ## [Unreleased]
 
 ### Added
+- **Selectable UI themes.** Choose a color palette — **Dark** (default), **Light**, **Amber** (a "military"
+  night mode that preserves night vision), or **High contrast** — on-device (Admin → Theme, reboots to apply)
+  or via `display.theme` in config. Custom palettes can be defined under `display.themes` (start from a built-in
+  `base`, override any color with `#RRGGBB`). Default appearance is unchanged.
 - **Per-row Info + Map buttons on the Heard Adverts screen.** Each heard node now has an explicit info (eye)
   button that opens its detail dialog, and — when the advert carries a location — a map button that opens the
   map centered on that node. Back now returns to the Admin screen. Thanks [@jason-s13r](https://github.com/jason-s13r) (#15).

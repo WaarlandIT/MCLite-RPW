@@ -57,6 +57,7 @@ That's it. Full walkthrough — including updates and companion mode — in [Get
 - **Map view** -- visualise positions on a slippy map (optional, requires tile pack on SD card). Tap a contact's name in chat for their position, or tap the **status-bar GPS icon** for the general map: your own location plus markers for every heard node / contact that carries GPS (same chat / repeater / room / sensor symbols as the heard-adverts list). Tap a marker for its name, drag to pan, zoomable, with Center and Reload buttons
 - **Message history** -- conversations saved to SD card and restored on reboot
 - **Quick replies** -- optional canned message picker for fast responses (OK, Copy, Need help, etc.), translatable and customizable; per-conversation override lists turn a contact/channel/room into a command menu (e.g. a Home Assistant bridge)
+- **Themes** -- selectable UI color palettes: **Dark** (default), **Light**, **Amber** (a "military" night mode that preserves night vision), and **High contrast**. Switch on-device (Admin -> Theme, reboots to apply) or set `display.theme` in config. You can also define your own palettes under `display.themes` -- start from a built-in `base` and override any color with a `#RRGGBB` value
 - **Emoji** -- received emoji render inline in chat (monochrome OpenMoji glyphs with a plain-text fallback, so anything outside the included set degrades gracefully rather than showing boxes). An on-device emoji picker (`display.emoji`, on by default, can be disabled) adds a smiley button to compose from a curated set, without letting a message exceed the 160-byte radio limit
 - **Multi-language** -- English, German, French, and Italian included. Add your own translations via SD card
 - **Notification sounds** -- chime on incoming messages, alarm on SOS. Supports custom WAV files from SD card
@@ -249,13 +250,26 @@ To set up a group: use **Fleet Mode** in the Setup Wizard. Add a device for each
 
   "display": {
     "brightness": 180,                 // 0-255
+    "theme": "dark",                   // UI palette: "dark" (default), "light", "amber", "high_contrast", or a custom name (see "themes")
     "auto_dim_seconds": 30,            // Dim screen after N seconds of inactivity (0 = off)
     "dim_brightness": 0,               // Brightness when dimmed (0 = screen off, default)
     "boot_text": "",                   // Optional text shown on boot screen (e.g. team name)
     "kbd_backlight": true,             // Keyboard backlight on/off with auto-dim
     "kbd_brightness": 127,             // Keyboard backlight brightness (1-255)
-    "emoji": true                     // Show the chat emoji picker (received emoji always render). Default on.
-  },
+    "emoji": true,                    // Show the chat emoji picker (received emoji always render). Default on.
+
+    // Optional custom palettes. Select one by putting its "name" in "theme" above.
+    // Each entry starts from "base" (a built-in) and overrides any of the color
+    // keys with "#RRGGBB". Unspecified keys inherit from the base.
+    "themes": [
+      {
+        "name": "my-theme",            // selectable name (use it in "theme")
+        "base": "dark",                // built-in to start from: dark | light | amber | high_contrast
+        "accent": "#FF8C00",           // override any keys: bg_primary, bg_secondary, bg_status_bar,
+        "bg_primary": "#101018"        //   bg_input, text_primary, text_secondary, text_timestamp,
+      }                                //   bubble_self, bubble_self_meta, bubble_them, bubble_self_text,
+    ]                                  //   accent, unread_dot, online_dot, battery_low, battery_ok,
+  },                                   //   gps_last_known, offgrid_accent, room_accent, scrim, text_on_accent
 
   "messaging": {
     "save_history": true,              // Save messages to SD card
