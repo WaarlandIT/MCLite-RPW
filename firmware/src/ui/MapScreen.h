@@ -4,9 +4,22 @@
 #include <Arduino.h>
 #include <vector>
 
+#include "theme.h"
 #include "../hal/Display.h"
 
 namespace mclite {
+
+// Board-specific map layout constants.
+// On T-Deck the map screen is a child of _mainScreen so the status bar stays
+// visible; the canvas is shifted down and shortened accordingly. On T-Watch
+// the map takes over the whole display (lv_scr_load) as before.
+#ifdef PLATFORM_TDECK
+static constexpr int MAP_SCREEN_Y = theme::STATUS_BAR_HEIGHT;
+static constexpr int MAP_CANVAS_H  = Display::height() - theme::STATUS_BAR_HEIGHT - theme::CHAT_HEADER_HEIGHT;
+#else
+static constexpr int MAP_SCREEN_Y = 0;
+static constexpr int MAP_CANVAS_H  = Display::height();
+#endif
 
 // Full-screen map view: renders slippy tiles from SD centred on a contact's
 // location, with close / zoom-in / center / zoom-out controls overlaid.
@@ -42,6 +55,7 @@ private:
     // --- rendering ---
     void render();
     void recenter();               // own location if available, else the open-center
+    void panBy(int dxPx, int dyPx); // shift view by pixel delta (button pan)
     void renderTiles();
     void drawHeardMarkers();       // type-letter dots for contacts + heard nodes w/ GPS
     void drawOwnMarker();
@@ -59,6 +73,10 @@ private:
     static void zoomInCb(lv_event_t* e);
     static void zoomOutCb(lv_event_t* e);
     static void centerBtnCb(lv_event_t* e);
+    static void panUpCb(lv_event_t* e);
+    static void panDownCb(lv_event_t* e);
+    static void panLeftCb(lv_event_t* e);
+    static void panRightCb(lv_event_t* e);
     static void screenKeyCb(lv_event_t* e);
     static void panPressedCb(lv_event_t* e);
     static void panPressingCb(lv_event_t* e);
@@ -74,6 +92,10 @@ private:
     lv_obj_t*   _zoomInBtn    = nullptr;
     lv_obj_t*   _zoomOutBtn   = nullptr;
     lv_obj_t*   _centerBtn    = nullptr;
+    lv_obj_t*   _panUpBtn     = nullptr;
+    lv_obj_t*   _panDownBtn   = nullptr;
+    lv_obj_t*   _panLeftBtn   = nullptr;
+    lv_obj_t*   _panRightBtn  = nullptr;
     lv_obj_t*   _infoLabel    = nullptr;
     lv_obj_t*   _selLabel     = nullptr;   // tapped-marker name (general mode), hidden by default
     lv_group_t* _mapGroup     = nullptr;
@@ -122,7 +144,7 @@ private:
     uint8_t  _zoom    = 0;
 
     static constexpr int CANVAS_W = Display::width();
-    static constexpr int CANVAS_H = Display::height();
+    static constexpr int CANVAS_H = MAP_CANVAS_H;
 };
 
 }  // namespace mclite

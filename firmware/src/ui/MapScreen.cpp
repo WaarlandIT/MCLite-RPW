@@ -217,7 +217,9 @@ void MapScreen::doOpen() {
     }
     _cbuf = s_cbuf;
 
+#ifndef PLATFORM_TDECK
     _prevScreen = lv_scr_act();
+#endif
     buildWidgets();
 
 #ifdef PLATFORM_TDECK
@@ -228,8 +230,12 @@ void MapScreen::doOpen() {
     lv_group_add_obj(_mapGroup, _closeBtn);
     if (_reloadBtn) lv_group_add_obj(_mapGroup, _reloadBtn);
     lv_group_add_obj(_mapGroup, _zoomInBtn);
-    lv_group_add_obj(_mapGroup, _centerBtn);
     lv_group_add_obj(_mapGroup, _zoomOutBtn);
+    lv_group_add_obj(_mapGroup, _panUpBtn);
+    lv_group_add_obj(_mapGroup, _panLeftBtn);
+    lv_group_add_obj(_mapGroup, _centerBtn);
+    lv_group_add_obj(_mapGroup, _panRightBtn);
+    lv_group_add_obj(_mapGroup, _panDownBtn);
     lv_group_focus_obj(_closeBtn);
     if (Keyboard::instance().indev())
         lv_indev_set_group(Keyboard::instance().indev(), _mapGroup);
@@ -237,7 +243,11 @@ void MapScreen::doOpen() {
         lv_indev_set_group(Trackball::instance().indev(), _mapGroup);
 #endif
 
+#ifdef PLATFORM_TDECK
+    lv_obj_clear_flag(_screen, LV_OBJ_FLAG_HIDDEN);
+#else
     lv_scr_load(_screen);
+#endif
     render();
 }
 
@@ -259,9 +269,13 @@ void MapScreen::close() {
 #endif
 
     // Restore previous screen and delete ours.
+#ifdef PLATFORM_TDECK
+    lv_obj_add_flag(_screen, LV_OBJ_FLAG_HIDDEN);
+#else
     if (_prevScreen && _prevScreen != _screen) {
         lv_scr_load(_prevScreen);
     }
+#endif
     destroyWidgets();
 
     // Don't free _cbuf — it's a shared PSRAM reservation owned by open()'s
@@ -290,8 +304,181 @@ void MapScreen::pickInitialZoom() {
 }
 
 void MapScreen::buildWidgets() {
+#ifdef PLATFORM_TDECK
+    _screen = lv_win_create(UIManager::instance().mainScreen(), theme::CHAT_HEADER_HEIGHT);
+    lv_obj_set_size(_screen, Display::width(), Display::height() - theme::STATUS_BAR_HEIGHT);
+    lv_obj_align(_screen, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT);
+    lv_obj_set_style_bg_color(_screen, theme::BG_PRIMARY(), 0);
+    lv_obj_set_style_bg_opa(_screen, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(_screen, 0, 0);
+    lv_obj_set_style_radius(_screen, 0, 0);
+    lv_obj_set_style_pad_all(_screen, 0, 0);
+
+    // Style the header
+    lv_obj_t* header = lv_win_get_header(_screen);
+    lv_obj_set_style_bg_color(header, theme::BG_STATUS_BAR(), 0);
+    lv_obj_set_style_bg_opa(header, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(header, 0, 0);
+    lv_obj_set_style_radius(header, 0, 0);
+    lv_obj_set_style_pad_all(header, theme::PAD_SMALL, 0);
+    lv_obj_set_style_pad_hor(header, theme::CHAT_HEADER_PAD_HOR, 0);
+
+    // Back button (replaces the floating close button)
+    _closeBtn = lv_win_add_btn(_screen, LV_SYMBOL_LEFT, theme::BTN_HEADER_BACK_W);
+    lv_obj_set_style_bg_opa(_closeBtn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_shadow_width(_closeBtn, 0, 0);
+    lv_obj_set_style_border_width(_closeBtn, 0, 0);
+    lv_obj_add_event_cb(_closeBtn, &MapScreen::closeBtnCb, LV_EVENT_CLICKED, this);
+    lv_obj_t* backLbl = lv_obj_get_child(_closeBtn, 0);
+    lv_obj_set_style_text_font(backLbl, FONT_HEADING, 0);
+    lv_obj_set_style_text_color(backLbl, theme::ACCENT(), 0);
+
+    // Title
+    lv_obj_t* title = lv_win_add_title(_screen, t("map_title"));
+    lv_obj_set_style_text_font(title, FONT_HEADING, 0);
+    lv_obj_set_style_text_color(title, theme::TEXT_PRIMARY(), 0);
+
+    // Header icon buttons: reload (general only), zoom out, zoom in
+    auto makeHeaderBtn = [this](const char* sym, lv_event_cb_t cb) -> lv_obj_t* {
+        lv_obj_t* btn = lv_win_add_btn(_screen, sym, theme::BTN_HEADER_ICON_W);
+        lv_obj_set_style_bg_opa(btn, LV_OPA_TRANSP, 0);
+        lv_obj_set_style_shadow_width(btn, 0, 0);
+        lv_obj_set_style_border_width(btn, 0, 0);
+        lv_obj_add_event_cb(btn, cb, LV_EVENT_CLICKED, this);
+        lv_obj_t* lbl = lv_obj_get_child(btn, 0);
+        lv_obj_set_style_text_font(lbl, FONT_HEADING, 0);
+        lv_obj_set_style_text_color(lbl, theme::TEXT_PRIMARY(), 0);
+        return btn;
+    };
+
+    if (_general) {
+        _reloadBtn = makeHeaderBtn(LV_SYMBOL_REFRESH, &MapScreen::reloadBtnCb);
+    }
+    _zoomOutBtn = makeHeaderBtn(LV_SYMBOL_MINUS, &MapScreen::zoomOutCb);
+    _zoomInBtn = makeHeaderBtn(LV_SYMBOL_PLUS, &MapScreen::zoomInCb);
+
+    // Content area — canvas and floating controls live here
+    lv_obj_t* content = lv_win_get_content(_screen);
+    lv_obj_set_style_bg_opa(content, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(content, 0, 0);
+    lv_obj_set_style_pad_all(content, 0, 0);
+    lv_obj_clear_flag(content, LV_OBJ_FLAG_SCROLLABLE);
+
+    // Canvas (full content area). Clickable so it can swallow PRESS events
+    // for drag-to-pan; buttons sit z-above and capture their own taps.
+    _canvas = lv_canvas_create(content);
+    lv_canvas_set_buffer(_canvas, _cbuf, CANVAS_W, CANVAS_H, LV_IMG_CF_TRUE_COLOR);
+    lv_obj_set_pos(_canvas, 0, 0);
+    lv_obj_add_flag(_canvas, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(_canvas, &MapScreen::panPressedCb,  LV_EVENT_PRESSED,  this);
+    lv_obj_add_event_cb(_canvas, &MapScreen::panPressingCb, LV_EVENT_PRESSING, this);
+    lv_obj_add_event_cb(_canvas, &MapScreen::panReleasedCb, LV_EVENT_RELEASED, this);
+
+    auto styleBtn = [](lv_obj_t* b) {
+        lv_obj_set_size(b, MAP_BTN, MAP_BTN);
+        lv_obj_set_style_radius(b, MAP_BTN / 2, 0);
+        lv_obj_set_style_bg_color(b, theme::BG_SECONDARY(), 0);
+        lv_obj_set_style_bg_opa(b, LV_OPA_70, 0);
+        lv_obj_set_style_border_width(b, 1, 0);
+        lv_obj_set_style_border_color(b, theme::TEXT_SECONDARY(), 0);
+        lv_obj_set_style_pad_all(b, 0, 0);
+    };
+
+    auto styleLbl = [](lv_obj_t* lbl) {
+        lv_obj_set_style_text_font(lbl, MAP_BTN_FONT, 0);
+        lv_obj_set_style_text_color(lbl, theme::TEXT_PRIMARY(), 0);
+        lv_obj_center(lbl);
+    };
+
+    // Bottom-right pan cluster: plus shape around center button.
+    _panUpBtn = lv_btn_create(content);
+    styleBtn(_panUpBtn);
+    lv_obj_align(_panUpBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + 2*MAP_BTN + 2*theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_panUpBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_UP);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_panUpBtn, &MapScreen::panUpCb, LV_EVENT_CLICKED, this);
+
+    _panLeftBtn = lv_btn_create(content);
+    styleBtn(_panLeftBtn);
+    lv_obj_align(_panLeftBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + 2*MAP_BTN + 2*theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_panLeftBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_LEFT);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_panLeftBtn, &MapScreen::panLeftCb, LV_EVENT_CLICKED, this);
+
+    _centerBtn = lv_btn_create(content);
+    styleBtn(_centerBtn);
+    lv_obj_align(_centerBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_centerBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_GPS);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_centerBtn, &MapScreen::centerBtnCb, LV_EVENT_CLICKED, this);
+
+    _panRightBtn = lv_btn_create(content);
+    styleBtn(_panRightBtn);
+    lv_obj_align(_panRightBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_panRightBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_RIGHT);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_panRightBtn, &MapScreen::panRightCb, LV_EVENT_CLICKED, this);
+
+    _panDownBtn = lv_btn_create(content);
+    styleBtn(_panDownBtn);
+    lv_obj_align(_panDownBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_panDownBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_DOWN);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_panDownBtn, &MapScreen::panDownCb, LV_EVENT_CLICKED, this);
+
+    // Info label (bottom-left): zoom level + scale text.
+    _infoLabel = lv_label_create(content);
+    lv_obj_set_style_text_font(_infoLabel, FONT_BODY, 0);
+    lv_obj_set_style_text_color(_infoLabel, theme::TEXT_PRIMARY(), 0);
+    lv_obj_set_style_bg_color(_infoLabel, theme::BG_SECONDARY(), 0);
+    lv_obj_set_style_bg_opa(_infoLabel, LV_OPA_70, 0);
+    lv_obj_set_style_pad_all(_infoLabel, 3, 0);
+    lv_obj_align(_infoLabel, LV_ALIGN_BOTTOM_LEFT,
+                  (MAP_CORNER_INSET + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL));
+
+    // Selection label (bottom-centre): shows a tapped node's name in general
+    // mode. Hidden until a marker is tapped; render() never overwrites it.
+    _selLabel = lv_label_create(content);
+    lv_obj_set_style_text_font(_selLabel, FONT_BODY, 0);
+    lv_obj_set_style_text_color(_selLabel, theme::TEXT_PRIMARY(), 0);
+    lv_obj_set_style_bg_color(_selLabel, theme::BG_SECONDARY(), 0);
+    lv_obj_set_style_bg_opa(_selLabel, LV_OPA_COVER, 0);
+    lv_obj_set_style_pad_all(_selLabel, 4, 0);
+    lv_obj_set_style_radius(_selLabel, 4, 0);
+    lv_obj_align(_selLabel, LV_ALIGN_BOTTOM_MID, 0, -(MAP_CORNER_INSET + theme::PAD_SMALL));
+    lv_obj_add_flag(_selLabel, LV_OBJ_FLAG_HIDDEN);
+
+#else  // PLATFORM_TWATCH
     _screen = lv_obj_create(nullptr);
     lv_obj_set_style_bg_color(_screen, lv_color_black(), 0);
+    lv_obj_set_style_radius(_screen, 0, 0);
+    lv_obj_set_style_border_width(_screen, 0, 0);
     lv_obj_clear_flag(_screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_pad_all(_screen, 0, 0);
 
@@ -324,13 +511,11 @@ void MapScreen::buildWidgets() {
         lv_obj_center(lbl);
     };
 
-    // Right-edge button stack — same placement on both boards, just sized
-    // larger on T-Watch via MAP_BTN. Vertical layout: close at top, then
-    // zoom-in / center / zoom-out centered on the right edge.
+    // Top-left: close button.
     _closeBtn = lv_btn_create(_screen);
     styleBtn(_closeBtn);
-    lv_obj_align(_closeBtn, LV_ALIGN_TOP_RIGHT,
-                 -(MAP_CORNER_INSET + theme::PAD_SMALL),
+    lv_obj_align(_closeBtn, LV_ALIGN_TOP_LEFT,
+                  (MAP_CORNER_INSET + theme::PAD_SMALL),
                   (MAP_CORNER_INSET + theme::PAD_SMALL));
     {
         lv_obj_t* lbl = lv_label_create(_closeBtn);
@@ -339,13 +524,11 @@ void MapScreen::buildWidgets() {
     }
     lv_obj_add_event_cb(_closeBtn, &MapScreen::closeBtnCb, LV_EVENT_CLICKED, this);
 
-    // Reload (general mode only) — left of Close. Re-scans the heard/contact
-    // caches so nodes heard while the map is open appear without panning.
     if (_general) {
         _reloadBtn = lv_btn_create(_screen);
         styleBtn(_reloadBtn);
         lv_obj_align(_reloadBtn, LV_ALIGN_TOP_RIGHT,
-                     -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                     -(MAP_CORNER_INSET + theme::PAD_SMALL + 2*(MAP_BTN + theme::PAD_SMALL)),
                       (MAP_CORNER_INSET + theme::PAD_SMALL));
         {
             lv_obj_t* lbl = lv_label_create(_reloadBtn);
@@ -357,9 +540,9 @@ void MapScreen::buildWidgets() {
 
     _zoomInBtn = lv_btn_create(_screen);
     styleBtn(_zoomInBtn);
-    lv_obj_align(_zoomInBtn, LV_ALIGN_RIGHT_MID,
-                 -(theme::SAFE_AREA_RIGHT + theme::PAD_SMALL),
-                 -(MAP_BTN + theme::PAD_SMALL));
+    lv_obj_align(_zoomInBtn, LV_ALIGN_TOP_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL),
+                  (MAP_CORNER_INSET + theme::PAD_SMALL));
     {
         lv_obj_t* lbl = lv_label_create(_zoomInBtn);
         lv_label_set_text(lbl, LV_SYMBOL_PLUS);
@@ -367,11 +550,49 @@ void MapScreen::buildWidgets() {
     }
     lv_obj_add_event_cb(_zoomInBtn, &MapScreen::zoomInCb, LV_EVENT_CLICKED, this);
 
+    // Top-right row: zoom out, zoom in, and reload (general mode).
+    _zoomOutBtn = lv_btn_create(_screen);
+    styleBtn(_zoomOutBtn);
+    lv_obj_align(_zoomOutBtn, LV_ALIGN_TOP_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                  (MAP_CORNER_INSET + theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_zoomOutBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_MINUS);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_zoomOutBtn, &MapScreen::zoomOutCb, LV_EVENT_CLICKED, this);
+
+    // Bottom-right pan cluster: plus shape around center button.
+    _panUpBtn = lv_btn_create(_screen);
+    styleBtn(_panUpBtn);
+    lv_obj_align(_panUpBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + 2*MAP_BTN + 2*theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_panUpBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_UP);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_panUpBtn, &MapScreen::panUpCb, LV_EVENT_CLICKED, this);
+
+    _panLeftBtn = lv_btn_create(_screen);
+    styleBtn(_panLeftBtn);
+    lv_obj_align(_panLeftBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + 2*MAP_BTN + 2*theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_panLeftBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_LEFT);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_panLeftBtn, &MapScreen::panLeftCb, LV_EVENT_CLICKED, this);
+
     _centerBtn = lv_btn_create(_screen);
     styleBtn(_centerBtn);
-    lv_obj_align(_centerBtn, LV_ALIGN_RIGHT_MID,
-                 -(theme::SAFE_AREA_RIGHT + theme::PAD_SMALL),
-                 0);
+    lv_obj_align(_centerBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL));
     {
         lv_obj_t* lbl = lv_label_create(_centerBtn);
         lv_label_set_text(lbl, LV_SYMBOL_GPS);
@@ -379,17 +600,29 @@ void MapScreen::buildWidgets() {
     }
     lv_obj_add_event_cb(_centerBtn, &MapScreen::centerBtnCb, LV_EVENT_CLICKED, this);
 
-    _zoomOutBtn = lv_btn_create(_screen);
-    styleBtn(_zoomOutBtn);
-    lv_obj_align(_zoomOutBtn, LV_ALIGN_RIGHT_MID,
-                 -(theme::SAFE_AREA_RIGHT + theme::PAD_SMALL),
-                  (MAP_BTN + theme::PAD_SMALL));
+    _panRightBtn = lv_btn_create(_screen);
+    styleBtn(_panRightBtn);
+    lv_obj_align(_panRightBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL));
     {
-        lv_obj_t* lbl = lv_label_create(_zoomOutBtn);
-        lv_label_set_text(lbl, LV_SYMBOL_MINUS);
+        lv_obj_t* lbl = lv_label_create(_panRightBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_RIGHT);
         styleLbl(lbl);
     }
-    lv_obj_add_event_cb(_zoomOutBtn, &MapScreen::zoomOutCb, LV_EVENT_CLICKED, this);
+    lv_obj_add_event_cb(_panRightBtn, &MapScreen::panRightCb, LV_EVENT_CLICKED, this);
+
+    _panDownBtn = lv_btn_create(_screen);
+    styleBtn(_panDownBtn);
+    lv_obj_align(_panDownBtn, LV_ALIGN_BOTTOM_RIGHT,
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL + MAP_BTN + theme::PAD_SMALL),
+                 -(MAP_CORNER_INSET + theme::PAD_SMALL));
+    {
+        lv_obj_t* lbl = lv_label_create(_panDownBtn);
+        lv_label_set_text(lbl, LV_SYMBOL_DOWN);
+        styleLbl(lbl);
+    }
+    lv_obj_add_event_cb(_panDownBtn, &MapScreen::panDownCb, LV_EVENT_CLICKED, this);
 
     // Info label (bottom-left): zoom level + scale text.
     _infoLabel = lv_label_create(_screen);
@@ -413,6 +646,7 @@ void MapScreen::buildWidgets() {
     lv_obj_set_style_radius(_selLabel, 4, 0);
     lv_obj_align(_selLabel, LV_ALIGN_BOTTOM_MID, 0, -(MAP_CORNER_INSET + theme::PAD_SMALL));
     lv_obj_add_flag(_selLabel, LV_OBJ_FLAG_HIDDEN);
+#endif
 
     // Screen-level key handler for Esc / +/- shortcuts (T-Deck keyboard).
     lv_obj_add_event_cb(_screen, &MapScreen::screenKeyCb, LV_EVENT_KEY, this);
@@ -423,7 +657,7 @@ void MapScreen::destroyWidgets() {
         lv_obj_del(_screen);
         _screen = nullptr;
     }
-    _canvas = _closeBtn = _reloadBtn = _zoomInBtn = _zoomOutBtn = _centerBtn = _infoLabel = _selLabel = nullptr;
+    _canvas = _closeBtn = _reloadBtn = _zoomInBtn = _zoomOutBtn = _centerBtn = _panUpBtn = _panDownBtn = _panLeftBtn = _panRightBtn = _infoLabel = _selLabel = nullptr;
 }
 
 void MapScreen::render() {
@@ -663,6 +897,45 @@ void MapScreen::centerBtnCb(lv_event_t* e) {
     MapScreen* self = static_cast<MapScreen*>(lv_event_get_user_data(e));
     if (!self) return;
     self->recenter();
+}
+
+void MapScreen::panBy(int dxPx, int dyPx) {
+    // Shift the view by a pixel delta. Positive dxPx pans right, positive dyPx pans down.
+    const double s = 360.0 / (256.0 * (double)(1 << _zoom));
+    const double cosLat = cos(_centerLat * M_PI / 180.0);
+    _centerLon += -(double)dxPx * s;
+    _centerLat += (double)dyPx * s * cosLat;
+
+    if (_centerLat >  SLIPPY_LAT_MAX) _centerLat =  SLIPPY_LAT_MAX;
+    if (_centerLat < -SLIPPY_LAT_MAX) _centerLat = -SLIPPY_LAT_MAX;
+    while (_centerLon >= 180.0) _centerLon -= 360.0;
+    while (_centerLon < -180.0) _centerLon += 360.0;
+
+    render();
+}
+
+void MapScreen::panUpCb(lv_event_t* e) {
+    MapScreen* self = static_cast<MapScreen*>(lv_event_get_user_data(e));
+    if (!self) return;
+    self->panBy(0, CANVAS_H / 2);
+}
+
+void MapScreen::panDownCb(lv_event_t* e) {
+    MapScreen* self = static_cast<MapScreen*>(lv_event_get_user_data(e));
+    if (!self) return;
+    self->panBy(0, -CANVAS_H / 2);
+}
+
+void MapScreen::panLeftCb(lv_event_t* e) {
+    MapScreen* self = static_cast<MapScreen*>(lv_event_get_user_data(e));
+    if (!self) return;
+    self->panBy(CANVAS_W / 2, 0);
+}
+
+void MapScreen::panRightCb(lv_event_t* e) {
+    MapScreen* self = static_cast<MapScreen*>(lv_event_get_user_data(e));
+    if (!self) return;
+    self->panBy(-CANVAS_W / 2, 0);
 }
 
 // Center on our own location if a fix is available (checked live, so it works as
