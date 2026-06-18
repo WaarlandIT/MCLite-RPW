@@ -1628,13 +1628,20 @@ void UIManager::openMapAsync(void* user) {
 }
 
 void UIManager::openMapAt(double lat, double lon, const String& name) {
-    // Tiles are guaranteed present (the chat link is only rendered when
+    openMapAt(nullptr, lat, lon, name);
+}
+
+void UIManager::openMapAt(const uint8_t* pubKey, double lat, double lon, const String& name) {
+    // Tiles are guaranteed present (callers only expose the action when
     // tilesAvailable()), so just defer the screen change — a touch cb must not
     // switch screens synchronously (matches the telemetry Map button flow).
+    // Passing a pubKey lets MapScreen resolve the node's real marker (type +
+    // name) instead of falling back to the generic "Chat" focus type.
     _pendingMapLat    = lat;
     _pendingMapLon    = lon;
     _pendingMapName   = name;
-    _pendingMapHasKey = false;
+    if (pubKey) { memcpy(_pendingMapKey, pubKey, 32); _pendingMapHasKey = true; }
+    else        { _pendingMapHasKey = false; }
     lv_async_call(&UIManager::openMapAsync, this);
 }
 

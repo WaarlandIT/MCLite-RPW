@@ -716,7 +716,9 @@ void HeardAdvertsScreen::mapBtnCb(lv_event_t* e) {
         name = pubKeyToShortId(advert.pubKey);
     }
 
-    UIManager::instance().openMapAt(advert.gpsLat / 1e6, advert.gpsLon / 1e6, name);
+    // Pass the pubkey so the map resolves this node's real marker (type + name)
+    // instead of defaulting the focus label to "Chat".
+    UIManager::instance().openMapAt(advert.pubKey, advert.gpsLat / 1e6, advert.gpsLon / 1e6, name);
 }
 
 void HeardAdvertsScreen::detailBtnCb(lv_event_t* e) {

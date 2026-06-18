@@ -114,6 +114,9 @@ public:
     // Open the map centered on an arbitrary coordinate (no contact). Used by the
     // tap-to-map link on a GPS coordinate in a chat message. Deferred via async.
     void openMapAt(double lat, double lon, const String& name);
+    // Same, but with the node's pubKey so the map shows its real marker
+    // type/name (used by the Heard Adverts per-row map button). Deferred.
+    void openMapAt(const uint8_t* pubKey, double lat, double lon, const String& name);
 
     // Brief auto-dismissing toast on top layer. Non-modal — doesn't steal
     // focus and disappears after `durationMs` (default 1500ms).
