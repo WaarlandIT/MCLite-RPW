@@ -2,6 +2,7 @@
 #include "util/log.h"
 #include "strings.h"
 #include "../storage/SDCard.h"
+#include "../config/defaults.h"
 #include <ArduinoJson.h>
 #include <SD.h>
 
@@ -322,6 +323,17 @@ void I18n::init(const String& langCode) {
     }
 
     JsonObject obj = doc.as<JsonObject>();
+
+    // Staleness check: warn if this lang file predates the firmware's string set
+    // (its "version" is older than defaults::LANG_VERSION), meaning some keys are
+    // missing and will fall back to English. Re-export from the config tool to fix.
+    int fileVer = obj["version"] | 0;
+    if (fileVer < (int)defaults::LANG_VERSION) {
+        LOGF("[I18n] WARNING: '%s' lang file is v%d but firmware expects v%d — "
+             "some strings may be missing (English fallback). Re-export the lang "
+             "files from the MCLite config tool.\n",
+             langCode.c_str(), fileVer, (int)defaults::LANG_VERSION);
+    }
 
     // Measure total buffer size needed for all keys + values (single pass)
     size_t totalLen = 0;

@@ -31,6 +31,9 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
   intact. Thanks [@jason-s13r](https://github.com/jason-s13r) (#26).
 
 ### Changed
+- **Translation files now carry a release version** (`"version"`, e.g. `39` for 0.3.9). On boot the firmware
+  logs a serial warning if a loaded language file is older than the firmware's string set, so missing
+  translations (English fallback) are diagnosable — re-export the lang files from the config tool to refresh.
 - **Auto GPS refresh now defaults off** (`messaging.auto_telemetry`). A fresh device no longer emits periodic
   telemetry requests on the mesh unless you opt in — quiet by default, matching the advert changes in 0.3.8.
   Existing configs that set the field are unaffected.
