@@ -13,6 +13,12 @@
 namespace mclite {
 
 namespace {
+// Batched-save state (A+B model): editors update the in-memory config live and
+// set g_dsDirty; the SD write happens once when leaving the screen (hide()).
+// Theme/language also set g_dsReboot so we reboot once on leave to apply.
+bool g_dsDirty  = false;
+bool g_dsReboot = false;
+
 // Friendly name for a theme: translated label for built-ins, raw name for custom.
 String themeDisplayName(const String& name) {
     if (name == "dark")          return t("theme_dark");
@@ -750,6 +756,11 @@ void DeviceSettingsScreen::show() {
 
 void DeviceSettingsScreen::hide() {
     if (_screen) {
+        // Commit batched edits on leave: one SD write, and reboot once if a
+        // reboot-needing setting (theme/language) was changed (A+B model).
+        if (g_dsDirty) { ConfigManager::instance().save(); g_dsDirty = false; }
+        if (g_dsReboot) { g_dsReboot = false; delay(200); ESP.restart(); }
+
         if (_themeBtnm) hideThemePicker();
         if (_nameTextarea) hideNameEditor();
         if (_langBtnm) hideLanguagePicker();
@@ -1003,7 +1014,7 @@ void DeviceSettingsScreen::pinReadyCb(lv_event_t* e) {
     if (self->_pendingPin == newPin) {
         if (mgr.config().security.pinCode != newPin) {
             mgr.config().security.pinCode = newPin;
-            mgr.save();
+            g_dsDirty = true;
         }
         self->_pendingPin = "";
         lv_async_call([](void* p) { ((DeviceSettingsScreen*)p)->hidePinEditor(); }, self);
@@ -1025,7 +1036,7 @@ void DeviceSettingsScreen::lockModeChosenCb(lv_event_t* e) {
         String newMode = g_lockModeNames[idx];
         if (mgr.config().security.lockMode != newMode) {
             mgr.config().security.lockMode = newMode;
-            mgr.save();
+            g_dsDirty = true;
         }
     }
     lv_async_call([](void* p) { ((DeviceSettingsScreen*)p)->hideLockModePicker(); }, self);
@@ -1041,7 +1052,7 @@ void DeviceSettingsScreen::autoLockChosenCb(lv_event_t* e) {
         String newMode = g_autoLockNames[idx];
         if (mgr.config().security.autoLock != newMode) {
             mgr.config().security.autoLock = newMode;
-            mgr.save();
+            g_dsDirty = true;
         }
     }
     lv_async_call([](void* p) { ((DeviceSettingsScreen*)p)->hideAutoLockPicker(); }, self);
@@ -1081,7 +1092,7 @@ void DeviceSettingsScreen::soundToggleCb(lv_event_t* e) {
     lv_obj_t* sw = lv_event_get_target(e);
     bool newVal = lv_obj_has_state(sw, LV_STATE_CHECKED);
     mgr.config().soundEnabled = newVal;
-    mgr.save();
+    g_dsDirty = true;
     Speaker::instance().setSoundEnabled(newVal);
     // Rebuild so the dependent SOS-repeat slider re-enables/disables reliably
     // (deferred: can't clean _content from inside this widget's own event).
@@ -1094,7 +1105,7 @@ void DeviceSettingsScreen::lowAlertToggleCb(lv_event_t* e) {
     lv_obj_t* sw = lv_event_get_target(e);
     bool newVal = lv_obj_has_state(sw, LV_STATE_CHECKED);
     mgr.config().battery.lowAlertEnabled = newVal;
-    mgr.save();
+    g_dsDirty = true;
     // Rebuild so the threshold slider re-enables/disables reliably (deferred:
     // can't clean _content from inside this widget's own event).
     if (self) lv_async_call([](void* p) { ((DeviceSettingsScreen*)p)->show(); }, self);
@@ -1117,7 +1128,7 @@ void DeviceSettingsScreen::sosKeywordReadyCb(lv_event_t* e) {
     auto& mgr = ConfigManager::instance();
     if (newKeyword.length() > 0 && mgr.config().sosKeyword != newKeyword) {
         mgr.config().sosKeyword = newKeyword;
-        mgr.save();
+        g_dsDirty = true;
     }
     lv_async_call([](void* p) { ((DeviceSettingsScreen*)p)->hideSosKeywordEditor(); }, self);
 }
@@ -1285,10 +1296,9 @@ void DeviceSettingsScreen::themeRowCb(lv_event_t* e) {
             auto& mgr = ConfigManager::instance();
             if (mgr.config().display.theme != g_themeNames[idx]) {
                 mgr.config().display.theme = g_themeNames[idx];
-                mgr.save();
-                delay(200);
-                ESP.restart();
-                return;
+                g_dsDirty = true;
+                g_dsReboot = true;   // applied via the reboot-on-leave commit
+                UIManager::instance().showToast(t("theme_apply_body"));
             }
         }
         lv_async_call([](void* ctx) { ((DeviceSettingsScreen*)ctx)->hideThemePicker(); }, s);
@@ -1336,7 +1346,7 @@ void DeviceSettingsScreen::bootTextReadyCb(lv_event_t* e) {
     auto& mgr = ConfigManager::instance();
     if (mgr.config().display.bootText != newBootText) {
         mgr.config().display.bootText = newBootText;
-        mgr.save();
+        g_dsDirty = true;
     }
     lv_async_call([](void* p) { ((DeviceSettingsScreen*)p)->hideBootTextEditor(); }, self);
 }
@@ -1468,7 +1478,7 @@ void DeviceSettingsScreen::nameReadyCb(lv_event_t* e) {
     auto& mgr = ConfigManager::instance();
     if (newName.length() > 0 && mgr.config().deviceName != newName) {
         mgr.config().deviceName = newName;
-        mgr.save();
+        g_dsDirty = true;
     }
     lv_async_call([](void* p) { ((DeviceSettingsScreen*)p)->hideNameEditor(); }, self);
 }
@@ -1661,10 +1671,9 @@ void DeviceSettingsScreen::languageRowCb(lv_event_t* e) {
             String newLang = g_langCodes[idx];
             if (mgr.config().language != newLang) {
                 mgr.config().language = newLang;
-                mgr.save();
-                delay(200);
-                ESP.restart();
-                return;
+                g_dsDirty = true;
+                g_dsReboot = true;   // applied via the reboot-on-leave commit
+                UIManager::instance().showToast(t("theme_apply_body"));
             }
         }
         lv_async_call([](void* ctx) { ((DeviceSettingsScreen*)ctx)->hideLanguagePicker(); }, s);
@@ -1718,23 +1727,23 @@ void DeviceSettingsScreen::inlineSliderReleasedCb(lv_event_t* e) {
     auto& mgr = ConfigManager::instance();
     if (slider == self->_brightnessSlider) {
         mgr.config().display.brightness = (uint8_t)v;
-        mgr.save();
+        g_dsDirty = true;
     } else if (slider == self->_autoDimSlider) {
         mgr.config().display.autoDimSeconds = (uint16_t)v;
-        mgr.save();
+        g_dsDirty = true;
     } else if (slider == self->_dimBrightnessSlider) {
         mgr.config().display.dimBrightness = (uint8_t)v;
-        mgr.save();
+        g_dsDirty = true;
     } else if (slider == self->_kbdBrightnessSlider) {
         mgr.config().display.kbdBrightness = (uint8_t)v;
         mgr.config().display.kbdBacklight = (v > 0);
-        mgr.save();
+        g_dsDirty = true;
     } else if (slider == self->_sosRepeatSlider) {
         mgr.config().sosRepeat = (uint8_t)v;
-        mgr.save();
+        g_dsDirty = true;
     } else if (slider == self->_lowAlertSlider) {
         mgr.config().battery.lowAlertThreshold = (uint8_t)v;
-        mgr.save();
+        g_dsDirty = true;
     }
 }
 
@@ -1743,7 +1752,7 @@ void DeviceSettingsScreen::emojiToggleCb(lv_event_t* e) {
     lv_obj_t* sw = lv_event_get_target(e);
     bool newVal = lv_obj_has_state(sw, LV_STATE_CHECKED);
     mgr.config().display.emoji = newVal;
-    mgr.save();
+    g_dsDirty = true;
 }
 
 void DeviceSettingsScreen::screenshotsToggleCb(lv_event_t* e) {
@@ -1751,7 +1760,7 @@ void DeviceSettingsScreen::screenshotsToggleCb(lv_event_t* e) {
     lv_obj_t* sw = lv_event_get_target(e);
     bool newVal = lv_obj_has_state(sw, LV_STATE_CHECKED);
     mgr.config().debug.screenshots = newVal;
-    mgr.save();
+    g_dsDirty = true;
 }
 
 }  // namespace mclite

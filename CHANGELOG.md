@@ -31,6 +31,10 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
   intact. Thanks [@jason-s13r](https://github.com/jason-s13r) (#26).
 
 ### Changed
+- **Device Settings saves once on exit.** Edits update the device live (brightness, etc.) but the SD write is
+  now batched — `config.json` is written a single time when you leave the screen, instead of on every change.
+  Theme/language changes reboot once on exit (toast on selection) rather than immediately, so you can change
+  several settings and apply them together.
 - **Translation files now carry a release version** (`"version"`, e.g. `39` for 0.3.9). On boot the firmware
   logs a serial warning if a loaded language file is older than the firmware's string set, so missing
   translations (English fallback) are diagnosable — re-export the lang files from the config tool to refresh.
