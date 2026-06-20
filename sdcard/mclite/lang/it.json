@@ -232,5 +232,24 @@
     "toast_muted": "Chat silenziata",
     "toast_unmuted": "Silenziamento disattivato",
     "screenshot_saved": "Screenshot salvato",
-    "screenshot_failed": "Screenshot fallito"
+    "screenshot_failed": "Screenshot fallito",
+
+    "grp_companion": "Companion",
+    "grp_conversations": "Conversazioni",
+    "grp_settings": "Impostazioni",
+    "sec_contacts_t": "Contatti",
+    "sec_channels_t": "Canali",
+    "sec_rooms_t": "Stanze",
+    "lbl_region_preset": "Regione",
+    "lbl_advert_interval": "Intervallo advert",
+    "lbl_location_format": "Formato posizione",
+    "lbl_canned": "Risposte rapide",
+    "lbl_allow_mute": "Consenti muto",
+    "preset_custom": "Personalizzato",
+    "loc_decimal": "Decimale",
+    "loc_mgrs": "MGRS",
+    "loc_both": "Entrambi",
+    "tel_battery": "Batteria",
+    "tel_location": "Posizione",
+    "tel_both": "Entrambi"
 }

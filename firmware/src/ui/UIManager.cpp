@@ -56,7 +56,7 @@ bool UIManager::init() {
     _convoList.create(_mainScreen);
     _chatScreen.create(_mainScreen);
     _adminScreen.create(_mainScreen);
-    _deviceSettingsScreen.create(_mainScreen);
+    _settingsScreen.create(_mainScreen);
     _heardAdvertsScreen.create(_mainScreen);
     _wifiSetupScreen.create(_mainScreen);
     _usbSetupScreen.create(_mainScreen);
@@ -212,6 +212,7 @@ void UIManager::update() {
     // Both no-op cheaply when not visible / version unchanged.
     _heardAdvertsScreen.tick();
     _adminScreen.tick();
+    _settingsScreen.tick();  // live Heard-Adverts count on the Radio section
     _wifiSetupScreen.tick();
     _usbSetupScreen.tick();
     _bleSetupScreen.tick();
@@ -278,6 +279,11 @@ void UIManager::loadMainScreen() {
     lv_timer_handler();
 }
 
+void UIManager::showSettings(SettingsSection s) {
+    _settingsScreen.setSection(s);
+    showScreen(Screen::DEVICE_SETTINGS);
+}
+
 void UIManager::showScreen(Screen screen) {
     // Dismiss telemetry modal if open (it's a top-level overlay)
     if (_telemMsgbox) dismissTelemetryModal();
@@ -285,7 +291,7 @@ void UIManager::showScreen(Screen screen) {
     _convoList.hide();
     _chatScreen.hide();
     _adminScreen.hide();
-    _deviceSettingsScreen.hide();
+    _settingsScreen.hide();
     _heardAdvertsScreen.hide();
     _wifiSetupScreen.hide();
     _usbSetupScreen.hide();
@@ -303,7 +309,7 @@ void UIManager::showScreen(Screen screen) {
             _adminScreen.show();
             break;
         case Screen::DEVICE_SETTINGS:
-            _deviceSettingsScreen.show();
+            _settingsScreen.show();
             break;
         case Screen::HEARD_ADVERTS:
             _heardAdvertsScreen.show();

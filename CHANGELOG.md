@@ -8,6 +8,20 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 ## [Unreleased]
 
 ### Added
+- **Settings reorganised into per-section screens + Admin is now a pure hub.** The on-device Admin screen no
+  longer mixes settings, diagnostics and shortcuts — it's three labelled groups of links: **Companion** (WiFi /
+  USB / Bluetooth), **Conversations** (Contacts / Channels / Rooms, read-only views), and **Settings** (Device,
+  Radio, Display, Messaging, Sound, GPS, Battery, Security). Each section is its own screen mirroring the config
+  tool, with all of its editable settings *and* its read-only diagnostics in one place (no more duplicated rows
+  across Admin and Device Settings). Newly editable on-device: **Radio** (region preset picker — EU/UK/CH vs
+  US/Canada — plus a TX-power slider and an advert-interval picker; frequency/SF/BW/CR/scope/path-hash stay read-only),
+  **Messaging** (history, max-per-chat, location format, retries, telemetry request/badges/auto-refresh, canned
+  messages, allow-mute), and **GPS** (enable, location-advert precision, timezone, clock offset, last-known max
+  age). Offgrid mode and the live Heard-Adverts count now live at the top of the Radio screen. Each hub link
+  carries an icon (gear for settings; `@`/`#`/`R` for contacts/channels/rooms; Wi-Fi/USB/Bluetooth for
+  companion), and the 3rd-party licenses moved to an *About* block at the bottom of the hub. Radio/GPS changes
+  reboot once on exit (same batched-save model as theme/language). The old single "Device Settings" screen is
+  superseded by this layout.
 - **Selectable UI themes.** Choose a color palette — **Dark** (default), **Light**, **Amber** (a "military"
   night mode that preserves night vision), or **High contrast** — on-device (Admin → Theme, reboots to apply)
   or via `display.theme` in config. Custom palettes can be defined under `display.themes` (start from a built-in

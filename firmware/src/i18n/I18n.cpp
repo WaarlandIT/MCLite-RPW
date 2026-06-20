@@ -164,6 +164,26 @@ const DefaultString DEFAULT_STRINGS[] = {
     {"lock_key",            "Key Lock"},
     {"lock_pin",            "PIN Lock"},
 
+    // Settings hub groups + section-screen extras
+    {"grp_companion",       "Companion"},
+    {"grp_conversations",   "Conversations"},
+    {"grp_settings",        "Settings"},
+    {"sec_contacts_t",      "Contacts"},
+    {"sec_channels_t",      "Channels"},
+    {"sec_rooms_t",         "Rooms"},
+    {"lbl_region_preset",   "Region"},
+    {"lbl_advert_interval", "Advert Interval"},
+    {"lbl_location_format", "Location Format"},
+    {"lbl_canned",          "Canned Messages"},
+    {"lbl_allow_mute",      "Allow Mute"},
+    {"preset_custom",       "Custom"},
+    {"loc_decimal",         "Decimal"},
+    {"loc_mgrs",            "MGRS"},
+    {"loc_both",            "Both"},
+    {"tel_battery",         "Battery"},
+    {"tel_location",        "Location"},
+    {"tel_both",            "Both"},
+
     // Offgrid mode (tap-to-toggle on admin screen)
     {"offgrid_off",              "OFF"},
     {"offgrid_on",               "ON"},

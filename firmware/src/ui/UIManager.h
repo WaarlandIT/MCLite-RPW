@@ -5,7 +5,7 @@
 #include "ConvoListScreen.h"
 #include "ChatScreen.h"
 #include "AdminScreen.h"
-#include "DeviceSettingsScreen.h"
+#include "SettingsScreen.h"
 #include "HeardAdvertsScreen.h"
 #include "WiFiSetupScreen.h"
 #include "UsbSetupScreen.h"
@@ -33,6 +33,7 @@ public:
     void update();  // Call from main loop (LVGL timer + status bar refresh)
 
     void showScreen(Screen screen);
+    void showSettings(SettingsSection s);  // set the settings section, then show it
     void openChat(const ConvoId& id);
     void goHome();
 
@@ -142,7 +143,7 @@ private:
     ConvoListScreen     _convoList;
     ChatScreen          _chatScreen;
     AdminScreen         _adminScreen;
-    DeviceSettingsScreen _deviceSettingsScreen;
+    SettingsScreen _settingsScreen;
     HeardAdvertsScreen  _heardAdvertsScreen;
     WiFiSetupScreen     _wifiSetupScreen;
     UsbSetupScreen      _usbSetupScreen;

@@ -232,5 +232,24 @@
     "toast_muted": "Chat en sourdine",
     "toast_unmuted": "Sourdine desactivee",
     "screenshot_saved": "Capture enregistree",
-    "screenshot_failed": "Echec de la capture"
+    "screenshot_failed": "Echec de la capture",
+
+    "grp_companion": "Companion",
+    "grp_conversations": "Conversations",
+    "grp_settings": "Parametres",
+    "sec_contacts_t": "Contacts",
+    "sec_channels_t": "Canaux",
+    "sec_rooms_t": "Salons",
+    "lbl_region_preset": "Region",
+    "lbl_advert_interval": "Intervalle advert",
+    "lbl_location_format": "Format position",
+    "lbl_canned": "Reponses rapides",
+    "lbl_allow_mute": "Autoriser muet",
+    "preset_custom": "Personnalise",
+    "loc_decimal": "Decimal",
+    "loc_mgrs": "MGRS",
+    "loc_both": "Les deux",
+    "tel_battery": "Batterie",
+    "tel_location": "Position",
+    "tel_both": "Les deux"
 }

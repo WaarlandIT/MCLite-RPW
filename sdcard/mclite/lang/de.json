@@ -232,5 +232,24 @@
     "toast_muted": "Chat stummgeschaltet",
     "toast_unmuted": "Stummschaltung aufgehoben",
     "screenshot_saved": "Screenshot gespeichert",
-    "screenshot_failed": "Screenshot fehlgeschlagen"
+    "screenshot_failed": "Screenshot fehlgeschlagen",
+
+    "grp_companion": "Companion",
+    "grp_conversations": "Konversationen",
+    "grp_settings": "Einstellungen",
+    "sec_contacts_t": "Kontakte",
+    "sec_channels_t": "Kanaele",
+    "sec_rooms_t": "Raeume",
+    "lbl_region_preset": "Region",
+    "lbl_advert_interval": "Advert-Intervall",
+    "lbl_location_format": "Standortformat",
+    "lbl_canned": "Schnellantworten",
+    "lbl_allow_mute": "Stumm erlauben",
+    "preset_custom": "Benutzerdefiniert",
+    "loc_decimal": "Dezimal",
+    "loc_mgrs": "MGRS",
+    "loc_both": "Beide",
+    "tel_battery": "Batterie",
+    "tel_location": "Standort",
+    "tel_both": "Beide"
 }
