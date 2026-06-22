@@ -2958,10 +2958,10 @@ body.v4 *::-webkit-scrollbar-thumb:hover { background: var(--shell-line-2); }
       <div class="field">
         <label>Conversation Management<button type="button" class="info-icon" onclick="toggleHint(this)" aria-label="Toggle hint">i</button></label>
         <select id="permConversation">
-          <option value="false" selected>Off</option>
-          <option value="true">On</option>
+          <option value="false">Off</option>
+          <option value="true" selected>On</option>
         </select>
-        <div class="hint collapsible">Reserved for a future release: when on, contacts / channels / rooms can be added/edited/removed on-device. Currently they are always read-only views regardless of this flag.</div>
+        <div class="hint collapsible">When on (default), contacts / channels / rooms can be added and removed on-device (Admin → Conversations); changes apply after a reboot. Turn off to keep those lists read-only on the device.</div>
       </div>
     </div>
   </div>
@@ -4695,7 +4695,7 @@ function loadConfig(cfg) {
   document.getElementById('permSettings').value =
     (permSet === 'restricted' || permSet === 'none') ? permSet : 'full';
   document.getElementById('permCompanion').value = String(cfg.permissions?.companion ?? true);
-  document.getElementById('permConversation').value = String(cfg.permissions?.conversation_management ?? false);
+  document.getElementById('permConversation').value = String(cfg.permissions?.conversation_management ?? true);
   document.getElementById('offgridEnabled').value = cfg.offgrid?.enabled ? 'true' : 'false';
   updateOffgridDerivedFreq();
 
@@ -4775,7 +4775,7 @@ async function applyDefaultsAndGenerate() {
   document.getElementById('adminEnabled').value = 'true';
   document.getElementById('permSettings').value = 'full';
   document.getElementById('permCompanion').value = 'true';
-  document.getElementById('permConversation').value = 'false';
+  document.getElementById('permConversation').value = 'true';
   toggleLockFields();
   renderContacts();
   renderChannels();

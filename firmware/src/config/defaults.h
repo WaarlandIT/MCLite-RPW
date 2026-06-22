@@ -109,7 +109,7 @@ constexpr bool     SCREENSHOTS_ENABLED   = false;  // debug.screenshots — save
 
 // Permissions (within the Admin gate). admin_enabled stays the global on/off.
 constexpr const char* PERM_SETTINGS      = "full";  // "full" | "restricted" | "none"
-constexpr bool     PERM_CONVERSATION_MGMT = false;  // add/edit/remove contacts/channels/rooms (future)
+constexpr bool     PERM_CONVERSATION_MGMT = true;   // on-device add/remove of contacts/channels/rooms
 constexpr bool     PERM_COMPANION        = true;    // show the Companion group in Admin
 
 // Language

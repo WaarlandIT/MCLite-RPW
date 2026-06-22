@@ -8,8 +8,8 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 ## [Unreleased]
 
 ### Added
-- **On-device add/remove of contacts, channels, and rooms.** With the new `permissions.conversation_management`
-  flag enabled (config-tool provisioned, default off), the Admin → Conversations screens gain **Add** and
+- **On-device add/remove of contacts, channels, and rooms.** With `permissions.conversation_management`
+  (config-tool provisioned, **on by default**; set false to lock the lists down), the Admin → Conversations screens gain **Add** and
   **Remove** for every type: contacts (from a heard advert, or by entering a 64-hex key), channels (Public
   one-tap, hashtag by name, or private with a generated/entered PSK), and room servers (name + key + optional
   password). Mirrors the config tool's rules (PSK derivation, Public's fixed key, caps of 32/16/8, duplicate

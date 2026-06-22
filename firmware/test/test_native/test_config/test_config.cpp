@@ -101,7 +101,7 @@ void test_permissions_default_full() {
     TEST_ASSERT_TRUE(parse("{}"));
     TEST_ASSERT_EQUAL_STRING("full", cfg->config().permissions.settings.c_str());
     TEST_ASSERT_TRUE(cfg->config().permissions.companion);
-    TEST_ASSERT_FALSE(cfg->config().permissions.conversationManagement);
+    TEST_ASSERT_TRUE(cfg->config().permissions.conversationManagement);
 }
 
 void test_permissions_round_trip() {

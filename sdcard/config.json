@@ -81,7 +81,7 @@
   },
   "permissions": {
     "settings": "full",
-    "conversation_management": false,
+    "conversation_management": true,
     "companion": true
   },
   "offgrid": {

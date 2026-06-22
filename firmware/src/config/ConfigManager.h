@@ -105,7 +105,7 @@ struct SecurityConfig {
 // (security.adminEnabled stays the global "can Admin open at all" switch).
 struct PermissionsConfig {
     String settings = "full";              // "full" | "restricted" | "none"
-    bool   conversationManagement = false; // add/edit/remove contacts/channels/rooms (future)
+    bool   conversationManagement = true;  // on-device add/remove of contacts/channels/rooms
     bool   companion = true;               // show the Companion group in Admin
 };
 
