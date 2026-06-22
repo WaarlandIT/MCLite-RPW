@@ -17,8 +17,16 @@ Most features below are optional. The primary goal is to keep things extremely s
 </p>
 
 <p align="center">
-<img src="docs/images/conversation-list.jpg" width="400" alt="Conversation list screen">&nbsp;&nbsp;
-<img src="docs/images/chat-view.jpg" width="400" alt="Chat view screen">
+<img src="docs/images/conversation-list.png" width="360" alt="Conversation list screen">&nbsp;&nbsp;
+<img src="docs/images/chat-view.png" width="360" alt="Chat view with map / telemetry / share header buttons">
+</p>
+
+<p align="center">
+<img src="docs/images/chat-canned-messages.png" width="190" alt="Canned quick-reply picker">&nbsp;
+<img src="docs/images/chat-emoji-picker.png" width="190" alt="Emoji picker">&nbsp;
+<img src="docs/images/heard-adverts.png" width="190" alt="Heard adverts list">&nbsp;
+<img src="docs/images/admin-screen.png" width="190" alt="Admin hub">&nbsp;
+<img src="docs/images/admin-contacts.png" width="190" alt="On-device contact management">
 </p>
 
 <p align="center">
