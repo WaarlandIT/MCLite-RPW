@@ -7,6 +7,14 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 
 ## [Unreleased]
 
+### Added
+- **Chat header action buttons (DM).** The chat screen moved to the standard windowed header (back · title ·
+  buttons), and direct-message chats gain two header buttons: **Telemetry** (refresh) opens the
+  battery/location/distance modal and requests fresh telemetry, and **Map** (GPS) opens the map centred on the
+  contact. The map button appears only when we actually have a position for the contact (telemetry / advert /
+  heard) and updates live while the chat is open — it shows when an advert brings in a location and hides when a
+  last-known fix ages out. Thanks [@jason-s13r](https://github.com/jason-s13r) (#30).
+
 ### Fixed
 - **Configured aliases now display everywhere.** The map (global + contact-focused) and the companion app's
   contact/room list were showing each node's *self-advertised* name instead of your configured alias — MeshCore
