@@ -79,7 +79,19 @@ bool UIManager::init() {
         goHome();
     });
 
-    _chatScreen.onInfo([this](const ConvoId& id) {
+    _chatScreen.onMap([this](const ConvoId& id) {
+        auto& contacts = ContactStore::instance();
+        for (size_t i = 0; i < contacts.count(); i++) {
+            const Contact* c = contacts.findByIndex(i);
+            if (c && c->shortId() == id.id) {
+                ContactLocation loc = bestKnownLocation(c->publicKey);
+                if (loc.valid) openMapAt(c->publicKey, loc.lat, loc.lon, c->name);
+                break;
+            }
+        }
+    });
+
+    _chatScreen.onTelem([this](const ConvoId& id) {
         showTelemetryModal(id);
     });
 
@@ -144,6 +156,10 @@ void UIManager::update() {
     // Periodic status bar update
     if (now - _lastStatusUpdate >= STATUS_UPDATE_MS) {
         _statusBar.update();
+        // Re-evaluate the chat header map button so it appears when an advert
+        // brings in a position and disappears when a last-known fix ages out of
+        // its freshness window (bestKnownLocation is time-sensitive).
+        if (_currentScreen == Screen::CHAT) refreshChatMapButton();
         _lastStatusUpdate = now;
     }
 
@@ -338,9 +354,29 @@ void UIManager::showScreen(Screen screen) {
     }
 }
 
+void UIManager::refreshChatMapButton() {
+    // Reveal the chat header's map button only when we have a position for the
+    // open DM contact (so the map always opens with something to centre on).
+    const ConvoId* cc = _chatScreen.currentConvo();
+    if (_currentScreen != Screen::CHAT || !cc || cc->type != ConvoId::DM) {
+        _chatScreen.setMapAvailable(false);
+        return;
+    }
+    auto& contacts = ContactStore::instance();
+    for (size_t i = 0; i < contacts.count(); i++) {
+        const Contact* c = contacts.findByIndex(i);
+        if (c && c->shortId() == cc->id) {
+            _chatScreen.setMapAvailable(bestKnownLocation(c->publicKey).valid);
+            return;
+        }
+    }
+    _chatScreen.setMapAvailable(false);
+}
+
 void UIManager::openChat(const ConvoId& id) {
     showScreen(Screen::CHAT);  // Hide other screens first
     _chatScreen.open(id);      // open() calls show() internally
+    refreshChatMapButton();    // map button shown only if the contact is located
 
     // Decision #14 — re-login on ROOM ChatScreen open. Wakes any server-side
     // 3-strike push-freeze caused by brief radio dropouts (~36 s tripwire).
@@ -1744,6 +1780,10 @@ void UIManager::updateTelemetryModal(const uint8_t* pubKey) {
             break;
         }
     }
+
+    // A telemetry reply may have just given us a position — reveal the chat
+    // header map button underneath the modal if so.
+    refreshChatMapButton();
 }
 
 void UIManager::onTelemetryRetry(uint32_t newTimeoutMs) {

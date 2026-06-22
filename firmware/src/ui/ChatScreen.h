@@ -9,9 +9,10 @@ namespace mclite {
 
 using OnSendCallback  = std::function<void(const ConvoId& id, const String& text)>;
 using OnBackCallback  = std::function<void()>;
-using OnInfoCallback  = std::function<void(const ConvoId& id)>;
 using OnRetryCallback = std::function<void(const ConvoId& id, const String& text, uint32_t oldPacketId)>;
 using OnMuteCallback  = std::function<void(const ConvoId& id, bool muted)>;
+using OnMapCallback   = std::function<void(const ConvoId& id)>;
+using OnTelemCallback = std::function<void(const ConvoId& id)>;
 
 class ChatScreen {
 public:
@@ -26,16 +27,21 @@ public:
 
     void onSend(OnSendCallback cb)   { _onSend = cb; }
     void onBack(OnBackCallback cb)   { _onBack = cb; }
-    void onInfo(OnInfoCallback cb)   { _onInfo = cb; }
     void onRetry(OnRetryCallback cb) { _onRetry = cb; }
-    void onMute(OnMuteCallback cb)  { _onMute = cb; }
+    void onMute(OnMuteCallback cb)   { _onMute = cb; }
+    void onMap(OnMapCallback cb)     { _onMap = cb; }
+    void onTelem(OnTelemCallback cb) { _onTelem = cb; }
+
+    // Show/hide the header map button (DM only) — driven by UIManager when a
+    // contact's position is known, so the map never opens without a centre.
+    void setMapAvailable(bool avail);
 
     const ConvoId* currentConvo() const { return _currentConvo.get(); }
     lv_obj_t* obj() { return _screen; }
 
 private:
     lv_obj_t* _screen    = nullptr;
-    lv_obj_t* _header    = nullptr;
+    lv_obj_t* _win       = nullptr;  // lv_win: owns header + scrollable content
     lv_obj_t* _chatArea  = nullptr;
     lv_obj_t* _inputBar  = nullptr;
     lv_obj_t* _textarea  = nullptr;
@@ -48,6 +54,8 @@ private:
     lv_obj_t* _emojiBtnm     = nullptr;  // emoji grid picker overlay
     lv_obj_t* _emojiOverlay  = nullptr;
     lv_obj_t* _headerName = nullptr;
+    lv_obj_t* _mapBtn   = nullptr;  // Map button (DM only)
+    lv_obj_t* _telemBtn = nullptr;  // Telemetry button (DM only)
     lv_obj_t* _muteIcon = nullptr;  // Mute indicator in header
 #ifdef PLATFORM_TWATCH
     lv_obj_t* _kbd        = nullptr;  // T-Watch only: on-screen keyboard
@@ -58,9 +66,10 @@ private:
 
     OnSendCallback  _onSend;
     OnBackCallback  _onBack;
-    OnInfoCallback  _onInfo;
     OnRetryCallback _onRetry;
     OnMuteCallback  _onMute;
+    OnMapCallback   _onMap;
+    OnTelemCallback _onTelem;
 
     void createHeader();
     void createChatArea();
@@ -86,7 +95,6 @@ private:
     static void gpsBtnCb(lv_event_t* e);
     static void backBtnCb(lv_event_t* e);
     static void textareaCb(lv_event_t* e);
-    static void headerNameCb(lv_event_t* e);
     static void senderNameClickCb(lv_event_t* e);
     static void retryBtnCb(lv_event_t* e);
     static void mapLinkCb(lv_event_t* e);
@@ -95,6 +103,8 @@ private:
     static void emojiBtnCb(lv_event_t* e);
     static void emojiBtnmCb(lv_event_t* e);
     static void muteIconCb(lv_event_t* e);
+    static void mapBtnCb(lv_event_t* e);
+    static void telemBtnCb(lv_event_t* e);
 };
 
 }  // namespace mclite
