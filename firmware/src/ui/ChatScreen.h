@@ -13,6 +13,7 @@ using OnRetryCallback = std::function<void(const ConvoId& id, const String& text
 using OnMuteCallback  = std::function<void(const ConvoId& id, bool muted)>;
 using OnMapCallback   = std::function<void(const ConvoId& id)>;
 using OnTelemCallback = std::function<void(const ConvoId& id)>;
+using OnShareCallback = std::function<void(const ConvoId& id)>;
 
 class ChatScreen {
 public:
@@ -31,10 +32,15 @@ public:
     void onMute(OnMuteCallback cb)   { _onMute = cb; }
     void onMap(OnMapCallback cb)     { _onMap = cb; }
     void onTelem(OnTelemCallback cb) { _onTelem = cb; }
+    void onShare(OnShareCallback cb) { _onShare = cb; }
 
     // Show/hide the header map button (DM only) — driven by UIManager when a
     // contact's position is known, so the map never opens without a centre.
     void setMapAvailable(bool avail);
+
+    // Show/hide the header Share button (DM only) — driven by UIManager when an
+    // advert blob exists for the contact (and the feature is enabled).
+    void setShareAvailable(bool avail);
 
     const ConvoId* currentConvo() const { return _currentConvo.get(); }
     lv_obj_t* obj() { return _screen; }
@@ -56,6 +62,7 @@ private:
     lv_obj_t* _headerName = nullptr;
     lv_obj_t* _mapBtn   = nullptr;  // Map button (DM only)
     lv_obj_t* _telemBtn = nullptr;  // Telemetry button (DM only)
+    lv_obj_t* _shareBtn = nullptr;  // Share button (DM only) — re-broadcast advert
     lv_obj_t* _muteIcon = nullptr;  // Mute indicator in header
 #ifdef PLATFORM_TWATCH
     lv_obj_t* _kbd        = nullptr;  // T-Watch only: on-screen keyboard
@@ -70,6 +77,7 @@ private:
     OnMuteCallback  _onMute;
     OnMapCallback   _onMap;
     OnTelemCallback _onTelem;
+    OnShareCallback _onShare;
 
     void createHeader();
     void createChatArea();
@@ -105,6 +113,7 @@ private:
     static void muteIconCb(lv_event_t* e);
     static void mapBtnCb(lv_event_t* e);
     static void telemBtnCb(lv_event_t* e);
+    static void shareBtnCb(lv_event_t* e);
 };
 
 }  // namespace mclite

@@ -87,6 +87,7 @@ struct MessagingConfig {
     std::vector<String> cannedCustom;    // Optional custom texts from config array
     bool     allowMute        = false;   // Allow per-chat mute via long-press (off by default)
     bool     autoTelemetry    = false;   // Periodically auto-refresh contacts' GPS via telemetry (opt-in, default off)
+    bool     shareContact     = true;    // Show the chat-header Share button (re-broadcast a contact's advert)
 };
 
 struct BatteryConfig {

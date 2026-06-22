@@ -55,7 +55,8 @@
     "show_telemetry": "both",
     "auto_telemetry": false,
     "canned_messages": true,
-    "allow_mute": false
+    "allow_mute": false,
+    "share_contact": true
   },
   "sound": {
     "enabled": true,

@@ -116,6 +116,19 @@ void ChatScreen::createHeader() {
     lv_obj_set_style_text_color(telemImg, theme::TEXT_SECONDARY(), 0);
     lv_obj_add_flag(_telemBtn, LV_OBJ_FLAG_HIDDEN);
 
+    // Share button — re-broadcasts the contact's advert (DM only). Revealed by
+    // setShareAvailable() when an advert blob exists and the feature is enabled.
+    _shareBtn = lv_win_add_btn(_win, LV_SYMBOL_UPLOAD, theme::BTN_HEADER_ICON_W);
+    lv_obj_set_style_bg_opa(_shareBtn, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_shadow_width(_shareBtn, 0, 0);
+    lv_obj_set_style_border_width(_shareBtn, 0, 0);
+    lv_obj_set_style_pad_all(_shareBtn, 0, 0);
+    lv_obj_add_event_cb(_shareBtn, shareBtnCb, LV_EVENT_CLICKED, this);
+    lv_obj_t* shareImg = lv_obj_get_child(_shareBtn, 0);
+    lv_obj_set_style_text_font(shareImg, FONT_HEADING, 0);
+    lv_obj_set_style_text_color(shareImg, theme::TEXT_SECONDARY(), 0);
+    lv_obj_add_flag(_shareBtn, LV_OBJ_FLAG_HIDDEN);
+
     // Mute indicator — shown on the right of the header when chat is muted
     _muteIcon = lv_win_add_btn(_win, LV_SYMBOL_MUTE, theme::BTN_HEADER_ICON_W);
     lv_obj_set_style_bg_opa(_muteIcon, LV_OPA_TRANSP, 0);
@@ -353,7 +366,8 @@ void ChatScreen::open(const ConvoId& id) {
     // UIManager) — otherwise the map would open with nothing to centre on.
     if (id.type == ConvoId::DM) lv_obj_clear_flag(_telemBtn, LV_OBJ_FLAG_HIDDEN);
     else                        lv_obj_add_flag(_telemBtn, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_add_flag(_mapBtn, LV_OBJ_FLAG_HIDDEN);  // revealed by setMapAvailable()
+    lv_obj_add_flag(_mapBtn, LV_OBJ_FLAG_HIDDEN);    // revealed by setMapAvailable()
+    lv_obj_add_flag(_shareBtn, LV_OBJ_FLAG_HIDDEN);  // revealed by setShareAvailable()
 
     // Mark as read
     MessageStore::instance().markRead(id);
@@ -1072,6 +1086,21 @@ void ChatScreen::telemBtnCb(lv_event_t* e) {
     auto* self = static_cast<ChatScreen*>(lv_event_get_user_data(e));
     if (!self || !self->_currentConvo || !self->_onTelem) return;
     self->_onTelem(*self->_currentConvo);
+}
+
+// Show the header Share button only for a DM contact we can re-broadcast (an
+// advert blob is held and the feature is enabled). Driven by UIManager.
+void ChatScreen::setShareAvailable(bool avail) {
+    if (!_shareBtn) return;
+    bool isDM = _currentConvo && _currentConvo->type == ConvoId::DM;
+    if (avail && isDM) lv_obj_clear_flag(_shareBtn, LV_OBJ_FLAG_HIDDEN);
+    else               lv_obj_add_flag(_shareBtn, LV_OBJ_FLAG_HIDDEN);
+}
+
+void ChatScreen::shareBtnCb(lv_event_t* e) {
+    auto* self = static_cast<ChatScreen*>(lv_event_get_user_data(e));
+    if (!self || !self->_currentConvo || !self->_onShare) return;
+    self->_onShare(*self->_currentConvo);
 }
 
 void ChatScreen::muteIconCb(lv_event_t* e) {

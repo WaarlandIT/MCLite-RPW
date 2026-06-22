@@ -50,6 +50,7 @@ That's it. Full walkthrough — including updates and companion mode — in [Get
 - **Channels** -- group communication via shared or public channels, with optional read-only (listen-only) mode
 - **Room servers** -- join community message boards run by MeshCore room servers (up to 8). Posts arrive on the conversation list with an `R` icon, ordered alongside DMs and channels by last activity. Auto-login on boot with retry; re-login on chat-open and after 10 minutes of silence to recover from brief radio dropouts.
 - **Heard adverts** -- browse a rolling 64-entry list of every device your radio has decoded, reachable from the admin screen. Per-row type icon (chat / repeater / room / sensor), hops, last-heard age, GPS when present. Tap a chat advert for the full per-hop path + fingerprint and a one-tap **Save** that adds it to your contact list (queued, applies on next reboot). Manual-advert button announces yourself on demand without waiting for the next periodic cycle
+- **Share a contact** -- the **Share** button in a DM chat header re-broadcasts that contact's signed advert at zero hop, so a nearby device picks them up in its own Heard Adverts and adds them with no key typing (MeshCore's standard contact-sharing). Saved contacts' adverts are kept on the SD card so sharing works after a reboot. Toggle with `messaging.share_contact`
 - **SOS alerts** -- long-press the trackball (hold 6 seconds) to broadcast an emergency alert
 - **Battery alerts** -- automatic low-battery warnings sent to your contacts
 - **GPS location sharing** -- manually send your position in lat/lon or UTMREF/MGRS (military grid) format, used by search and rescue worldwide. Last-known position support when GPS signal is temporarily lost. Optionally **broadcast your location in adverts** (`location_precision`, off by default) so contacts see you on their map -- with a **privacy precision** setting (exact, or coarsened to a ~100 m / ~750 m / ~3 km / ~12 km / ~50 km grid). Note adverts are unencrypted and reach everyone in range; targeted per-contact telemetry replies and the in-chat GPS insert always use your exact position
@@ -280,10 +281,12 @@ To set up a group: use **Fleet Mode** in the Setup Wizard. Add a device for each
     "show_telemetry": "both",          // Badges on convo list: "battery", "location", "both", "none"
     "auto_telemetry": false,           // Auto-refresh GPS of contacts who don't broadcast it, to keep map
                                        //   markers fresh. Throttled + self-limiting (backs off non-responders). Opt-in, off by default.
-    "canned_messages": true            // Quick-reply picker: true = on (default messages, default), false = off,
+    "canned_messages": true,           // Quick-reply picker: true = on (default messages, default), false = off,
                                        //   or ["Reply 1", "Reply 2"] = on with custom messages (max 8).
                                        //   This is the GLOBAL list; individual contacts/channels/rooms can override
                                        //   it with their own "canned" array (see above). Per-conversation lists win.
+    "share_contact": true              // Share button in a DM chat header re-broadcasts that contact's advert so
+                                       //   a nearby device can add them from Heard Adverts (no key typing). On by default.
   },
 
   "sound": {
@@ -346,6 +349,7 @@ The T-Deck Plus is keyboard + trackball driven; the T-Watch Ultra is touch drive
 | Power off | Slide the power switch | Long-press upper (PWR) button |
 | Mute / unmute | Tap speaker icon in status bar | Same |
 | Contact telemetry | Tap the telemetry (refresh) button in chat header | Same |
+| Share a contact | Tap the share (↑) button in a DM chat header | Same |
 | Retry failed message | Tap the X on a failed message | Same |
 | Quick reply | Tap the list icon (≡) by the text input | Same |
 | Screenshot (when `debug.screenshots` is on) | Shift + $ | Double-press upper (PWR) button |

@@ -141,6 +141,20 @@ public:
     // Deterministic so the offgrid network is always interoperable.
     static float offgridFreqFor(float normalFreq);
 
+    // ─── Contact sharing (zero-hop advert re-broadcast) ───
+    // Re-broadcast a saved contact's original signed advert so nearby nodes hear
+    // it and can add the contact (it lands in their Heard Adverts). Uses the raw
+    // advert blob captured by put/getBlobByKey. Returns false if no blob is held
+    // for this pubkey (never heard / not persisted) or the send fails.
+    bool shareContact(const uint8_t* pubKey);
+    // True if a re-broadcastable advert blob exists for this pubkey (RAM or SD).
+    bool hasAdvertBlob(const uint8_t* pubKey);
+    // Persist this pubkey's in-RAM advert blob to SD (call right after a contact
+    // is saved, so Share survives a reboot). No-op if no RAM blob is held.
+    bool persistAdvertBlobForKey(const uint8_t* pubKey);
+    // Remove a contact's persisted advert blob (call on contact removal).
+    void deleteAdvertBlob(const uint8_t* pubKey);
+
 protected:
     // ---- Required BaseChatMesh overrides ----
 
@@ -183,6 +197,13 @@ protected:
     // ---- Optional overrides ----
     bool shouldAutoAddContactType(uint8_t type) const override { return false; }  // MCLite uses config-defined contacts only
 
+    // Advert-blob persistence — store/retrieve the raw signed advert packet keyed
+    // by contact pubkey, which is what shareContactZeroHop() re-broadcasts. RAM
+    // cache holds the latest advert for every heard node; saved contacts are also
+    // backed to SD so sharing survives reboots (see advert-blob members below).
+    bool putBlobByKey(const uint8_t key[], int key_len, const uint8_t src_buf[], int len) override;
+    int  getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[]) override;
+
     // Offgrid / client-repeat: forward packets for other nodes when enabled.
     // Base-class dedup via _tables->hasSeen() prevents loops at every forward site.
     bool allowPacketForward(const mesh::Packet* packet) override { return _offgridEnabled; }
@@ -198,6 +219,23 @@ private:
     TransportKey _globalScope;  // Derived from RadioConfig::scope at begin()
     uint8_t _pathHashSize = 1;  // 1/2/3 bytes per hop — wire value passed to sendFlood()
     void sendWithScope(const TransportKey& scope, mesh::Packet* pkt, uint32_t delay_millis);
+
+    // ─── Advert-blob cache (backs contact sharing) ───
+    static constexpr size_t ADVERT_BLOB_MAX   = 192;   // raw advert packets sit well under this
+    static constexpr size_t ADVERT_BLOB_SLOTS = MAX_CONTACTS;
+    struct AdvertBlob {
+        uint8_t  key[PUB_KEY_SIZE] = {0};
+        uint8_t  data[ADVERT_BLOB_MAX];
+        uint16_t len  = 0;
+        uint32_t seq  = 0;      // recency counter for LRU eviction
+        bool     used = false;
+    };
+    AdvertBlob  _advertBlobs[ADVERT_BLOB_SLOTS];
+    uint32_t    _advertBlobSeq = 0;
+    AdvertBlob* findAdvertBlob(const uint8_t* key);   // RAM lookup (nullptr if absent)
+    bool        loadAdvertBlobFromSD(const uint8_t* key, uint8_t* dest, uint16_t& len);
+    bool        writeAdvertBlobToSD(const uint8_t* key, const uint8_t* data, uint16_t len);
+    static void advertBlobPath(const uint8_t* key, char* out, size_t outLen);
 
     // Callbacks
     MeshMessageCb  _onMessage;

@@ -7,6 +7,7 @@
 #include "../hal/GPS.h"
 #include "../storage/HeardAdvertCache.h"
 #include "../storage/MessageStore.h"
+#include "../storage/SDCard.h"
 #include "../util/hex.h"
 #include "../util/offgrid.h"
 #include "../util/locprecision.h"
@@ -598,6 +599,122 @@ void MCLiteMesh::onDiscoveredContact(ContactInfo& contact, bool is_new,
                                        contact.gps_lon);
 
     if (_onAdvert) _onAdvert(contact, is_new);
+}
+
+// ───────────────────────── Advert-blob store / contact sharing ─────────────────────────
+//
+// shareContactZeroHop() re-broadcasts a contact's *original signed advert* — the
+// only way to share a contact (we can't sign an advert on someone else's behalf).
+// MeshCore captures that raw packet via putBlobByKey() in onAdvertRecv; we keep a
+// RAM cache of the latest advert per heard node, and back saved contacts to SD so
+// sharing survives a reboot. getBlobByKey() feeds it back for the re-broadcast.
+
+void MCLiteMesh::advertBlobPath(const uint8_t* key, char* out, size_t outLen) {
+    char hex[PUB_KEY_SIZE * 2 + 1];
+    for (int i = 0; i < PUB_KEY_SIZE; i++) sprintf(hex + i * 2, "%02x", key[i]);
+    hex[PUB_KEY_SIZE * 2] = '\0';
+    snprintf(out, outLen, "/mclite/adverts/%s.adv", hex);
+}
+
+MCLiteMesh::AdvertBlob* MCLiteMesh::findAdvertBlob(const uint8_t* key) {
+    for (auto& b : _advertBlobs) {
+        if (b.used && memcmp(b.key, key, PUB_KEY_SIZE) == 0) return &b;
+    }
+    return nullptr;
+}
+
+bool MCLiteMesh::writeAdvertBlobToSD(const uint8_t* key, const uint8_t* data, uint16_t len) {
+    if (!SDCard::instance().isMounted() || len == 0) return false;
+    SDCard::instance().mkdir("/mclite/adverts");
+    char path[96];
+    advertBlobPath(key, path, sizeof(path));
+    // Hex-encode so the binary packet round-trips through the String file API.
+    String hex;
+    hex.reserve(len * 2);
+    char b[3];
+    for (uint16_t i = 0; i < len; i++) { sprintf(b, "%02x", data[i]); hex += b; }
+    return SDCard::instance().writeFile(path, hex);
+}
+
+bool MCLiteMesh::loadAdvertBlobFromSD(const uint8_t* key, uint8_t* dest, uint16_t& len) {
+    len = 0;
+    if (!SDCard::instance().isMounted()) return false;
+    char path[96];
+    advertBlobPath(key, path, sizeof(path));
+    if (!SDCard::instance().fileExists(path)) return false;
+    String hex = SDCard::instance().readFile(path);
+    size_t n = hex.length() / 2;
+    if (n == 0 || n > ADVERT_BLOB_MAX) return false;
+    for (size_t i = 0; i < n; i++) {
+        char pair[3] = { hex[i * 2], hex[i * 2 + 1], '\0' };
+        dest[i] = (uint8_t)strtoul(pair, nullptr, 16);
+    }
+    len = (uint16_t)n;
+    return true;
+}
+
+bool MCLiteMesh::putBlobByKey(const uint8_t key[], int key_len, const uint8_t src_buf[], int len) {
+    if (key_len != PUB_KEY_SIZE || len <= 0 || (size_t)len > ADVERT_BLOB_MAX) return false;
+
+    // Reuse this key's slot, else a free slot, else evict the least-recently-used.
+    AdvertBlob* slot = findAdvertBlob(key);
+    if (!slot) for (auto& b : _advertBlobs) { if (!b.used) { slot = &b; break; } }
+    if (!slot) { slot = &_advertBlobs[0]; for (auto& b : _advertBlobs) if (b.seq < slot->seq) slot = &b; }
+
+    memcpy(slot->key, key, PUB_KEY_SIZE);
+    memcpy(slot->data, src_buf, len);
+    slot->len  = (uint16_t)len;
+    slot->seq  = ++_advertBlobSeq;
+    slot->used = true;
+
+    // Backfill SD once for known (config) contacts so Share works after a reboot,
+    // without writing on every advert (skip when a file already exists / not a contact).
+    if (lookupContactByPubKey(key, PUB_KEY_SIZE)) {
+        char path[96];
+        advertBlobPath(key, path, sizeof(path));
+        if (!SDCard::instance().fileExists(path)) writeAdvertBlobToSD(key, slot->data, slot->len);
+    }
+    return true;
+}
+
+int MCLiteMesh::getBlobByKey(const uint8_t key[], int key_len, uint8_t dest_buf[]) {
+    if (key_len != PUB_KEY_SIZE) return 0;
+    if (AdvertBlob* slot = findAdvertBlob(key)) {
+        memcpy(dest_buf, slot->data, slot->len);
+        return slot->len;
+    }
+    // Fall back to a persisted blob (saved contact heard in a previous session).
+    uint16_t len = 0;
+    if (loadAdvertBlobFromSD(key, dest_buf, len)) return len;
+    return 0;
+}
+
+bool MCLiteMesh::hasAdvertBlob(const uint8_t* pubKey) {
+    if (findAdvertBlob(pubKey)) return true;
+    char path[96];
+    advertBlobPath(pubKey, path, sizeof(path));
+    return SDCard::instance().isMounted() && SDCard::instance().fileExists(path);
+}
+
+bool MCLiteMesh::persistAdvertBlobForKey(const uint8_t* pubKey) {
+    AdvertBlob* slot = findAdvertBlob(pubKey);
+    if (!slot) return false;
+    return writeAdvertBlobToSD(pubKey, slot->data, slot->len);
+}
+
+void MCLiteMesh::deleteAdvertBlob(const uint8_t* pubKey) {
+    if (AdvertBlob* slot = findAdvertBlob(pubKey)) { slot->used = false; slot->len = 0; }
+    if (SDCard::instance().isMounted()) {
+        char path[96];
+        advertBlobPath(pubKey, path, sizeof(path));
+        if (SDCard::instance().fileExists(path)) SDCard::instance().remove(path);
+    }
+}
+
+bool MCLiteMesh::shareContact(const uint8_t* pubKey) {
+    ContactInfo* ci = lookupContactByPubKey(pubKey, PUB_KEY_SIZE);
+    if (!ci) return false;
+    return shareContactZeroHop(*ci);
 }
 
 ContactInfo* MCLiteMesh::processAck(const uint8_t* data) {

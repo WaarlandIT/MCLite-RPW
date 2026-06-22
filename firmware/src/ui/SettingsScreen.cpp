@@ -928,7 +928,8 @@ void SettingsScreen::onConvoModalChoice(lv_obj_t* dlg, int idxIn) {
             ok = ConfigManager::instance().removeContactAt(i);
             if (ok) for (const auto& sc : ContactStore::instance().all())
                 if (sc.publicKeyB64.equalsIgnoreCase(b64)) {
-                    MessageStore::instance().removeConversation(ConvoId{ConvoId::DM, sc.shortId()}); break; }
+                    MessageStore::instance().removeConversation(ConvoId{ConvoId::DM, sc.shortId()});
+                    MeshManager::instance().deleteAdvertBlob(sc.publicKey); break; }
         } else if (self->_section == SettingsSection::Channels && i < c.channels.size()) {
             String chName = c.channels[i].name;
             ok = ConfigManager::instance().removeChannelAt(i);

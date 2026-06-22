@@ -68,6 +68,18 @@ public:
     // Request telemetry from a contact — returns true on success
     bool requestTelemetry(size_t contactIndex, uint32_t& estTimeout);
 
+    // ─── Contact sharing ───
+    // Re-broadcast a contact's signed advert at zero hop so nearby nodes can add
+    // it (lands in their Heard Adverts). Returns false if no advert blob is held
+    // or the radio isn't ready.
+    bool shareContact(const uint8_t* pubKey);
+    // True if a re-broadcastable advert blob exists for this pubkey (RAM or SD).
+    bool canShareContact(const uint8_t* pubKey) const;
+    // Persist a just-saved contact's advert blob so Share survives a reboot.
+    bool persistAdvertBlob(const uint8_t* pubKey);
+    // Drop a removed contact's persisted advert blob.
+    void deleteAdvertBlob(const uint8_t* pubKey);
+
     // Clear pending telemetry state (call on timeout)
     void clearPendingTelemetry();
 

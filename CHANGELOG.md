@@ -8,6 +8,13 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 ## [Unreleased]
 
 ### Added
+- **Share a contact over the air.** Direct-message chats gain a **Share** button in the header that
+  re-broadcasts that contact's original signed advert at zero hop — a nearby device hears it and can add the
+  contact straight from its **Heard Adverts**, no key typing. This is MeshCore's standard contact-sharing
+  mechanism (`shareContactZeroHop`); MCLite now caches each heard advert and backs saved contacts' adverts to
+  the SD card so sharing still works after a reboot. The button only appears when we hold a re-broadcastable
+  advert for the contact (added from a heard advert, or heard this session). Gated by the new
+  `messaging.share_contact` setting (**on by default**; set false to hide the button).
 - **On-device add/remove of contacts, channels, and rooms.** With `permissions.conversation_management`
   (config-tool provisioned, **on by default**; set false to lock the lists down), the Admin → Conversations screens gain **Add** and
   **Remove** for every type: contacts (from a heard advert, or by entering a 64-hex key), channels (Public
@@ -33,6 +40,11 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 - **Contact telemetry is now a header button, not the contact name.** Tapping the contact name in a DM chat no
   longer opens the telemetry/info pop-up — use the **telemetry (refresh) button** in the chat header instead
   (the name is now just the title). Part of the chat-header rework above (#30).
+- **Modal buttons are consistent everywhere.** Every confirmation/chooser/info dialog (reboot, delete, offgrid,
+  SOS alert, telemetry, firmware install, Heard-Adverts detail, …) now uses one shared modal widget with
+  full-width, stacked buttons instead of cramped side-by-side rows, and the per-section settings editors
+  (device name, boot text, SOS keyword, PIN, timezone) stack their Save/Cancel the same way — easier to read and
+  tap on both boards.
 
 ### Fixed
 - **Configured aliases now display everywhere.** The map (global + contact-focused) and the companion app's

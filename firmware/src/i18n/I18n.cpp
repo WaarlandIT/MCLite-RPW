@@ -306,6 +306,10 @@ const DefaultString DEFAULT_STRINGS[] = {
     {"toast_muted",         "Chat muted"},
     {"toast_unmuted",       "Chat unmuted"},
 
+    // Share contact (re-broadcast advert)
+    {"toast_shared",        "Contact shared"},
+    {"toast_share_fail",    "Share failed"},
+
     // Screenshot (debug.screenshots)
     {"screenshot_saved",    "Screenshot saved"},
     {"screenshot_failed",   "Screenshot failed"},

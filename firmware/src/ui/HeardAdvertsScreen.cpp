@@ -733,6 +733,9 @@ void HeardAdvertsScreen::handleSave() {
         return;
     }
     HeardAdvertCache::instance().markSavePending(e.pubKey);
+    // Persist this contact's raw advert blob so the chat-header Share button can
+    // re-broadcast it even after a reboot (the advert was heard this session).
+    MeshManager::instance().persistAdvertBlob(e.pubKey);
     closeDetail();
     showSavedConfirmation();
 }

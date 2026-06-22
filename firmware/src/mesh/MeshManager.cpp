@@ -333,6 +333,23 @@ void MeshManager::clearPendingTelemetry() {
     if (_mesh) _mesh->clearPendingTelemetry();
 }
 
+bool MeshManager::shareContact(const uint8_t* pubKey) {
+    if (!_mesh || !_radioReady) return false;
+    return _mesh->shareContact(pubKey);
+}
+
+bool MeshManager::canShareContact(const uint8_t* pubKey) const {
+    return _mesh && _mesh->hasAdvertBlob(pubKey);
+}
+
+bool MeshManager::persistAdvertBlob(const uint8_t* pubKey) {
+    return _mesh && _mesh->persistAdvertBlobForKey(pubKey);
+}
+
+void MeshManager::deleteAdvertBlob(const uint8_t* pubKey) {
+    if (_mesh) _mesh->deleteAdvertBlob(pubKey);
+}
+
 bool MeshManager::sendAdvertNow(bool flood) {
     if (!_mesh || !_radioReady) return false;
     const auto& cfg = ConfigManager::instance().config();

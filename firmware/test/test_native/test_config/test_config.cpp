@@ -430,6 +430,26 @@ void test_auto_telemetry_round_trips() {
     TEST_ASSERT_FALSE(cfg->config().messaging.autoTelemetry);
 }
 
+// ═══ Share-contact flag (chat-header Share button) ═══
+
+void test_share_contact_defaults_on() {
+    parse("{}");
+    TEST_ASSERT_TRUE(cfg->config().messaging.shareContact);
+}
+
+void test_share_contact_explicit_false() {
+    parse("{\"messaging\":{\"share_contact\": false}}");
+    TEST_ASSERT_FALSE(cfg->config().messaging.shareContact);
+}
+
+void test_share_contact_round_trips() {
+    parse("{\"messaging\":{\"share_contact\": false}}");
+    String json = cfg->toJson();
+    cfg->config() = AppConfig{};
+    cfg->parseJson(json);
+    TEST_ASSERT_FALSE(cfg->config().messaging.shareContact);
+}
+
 // ═══ Display emoji flag ═══
 
 void test_emoji_defaults_true() {
@@ -1010,6 +1030,9 @@ int main() {
     RUN_TEST(test_auto_telemetry_defaults_off);
     RUN_TEST(test_auto_telemetry_explicit_true);
     RUN_TEST(test_auto_telemetry_round_trips);
+    RUN_TEST(test_share_contact_defaults_on);
+    RUN_TEST(test_share_contact_explicit_false);
+    RUN_TEST(test_share_contact_round_trips);
     RUN_TEST(test_emoji_defaults_true);
     RUN_TEST(test_emoji_explicit_false);
     RUN_TEST(test_emoji_round_trips);

@@ -26,7 +26,7 @@ constexpr const char* FIRMWARE_VENDOR  = MCLITE_REPO_OWNER "/" MCLITE_REPO_NAME;
 // set the SAME number in each sdcard/mclite/lang/*.json "version". On boot I18n
 // warns (serial) if a loaded lang file's version is older — i.e. it predates the
 // current string set, so some keys will fall back to English.
-constexpr uint16_t LANG_VERSION = 40;
+constexpr uint16_t LANG_VERSION = 41;
 
 // Device
 constexpr const char* DEVICE_NAME = "MCLite";
@@ -68,6 +68,7 @@ constexpr const char* SHOW_TELEMETRY    = "both";  // "battery", "location", "bo
 constexpr bool     CANNED_MESSAGES_ENABLED = true;
 constexpr bool     ALLOW_MUTE            = false;  // Enable per-chat mute (long-press); off by default
 constexpr bool     AUTO_TELEMETRY        = false;  // Auto-refresh contacts' GPS via periodic telemetry (opt-in)
+constexpr bool     SHARE_CONTACT         = true;   // Chat-header Share button (re-broadcast a contact's advert)
 
 // Auto-telemetry scheduler tuning (background GPS refresh for contacts who don't advert location)
 constexpr uint32_t AUTO_TELEM_SCAN_MS        = 60000;    // Evaluate at most one request per minute
