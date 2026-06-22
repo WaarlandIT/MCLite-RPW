@@ -799,20 +799,19 @@ void SettingsScreen::convoAddRowCb(lv_event_t* e) {
         return;
     }
 
-    static const char* btns[4];
+    // "\n" between entries → one button per row (readable on the narrow screens).
+    static const char* btns[6];
     const char* title;
     if (self->_section == SettingsSection::Contacts) {
         title   = t("convo_add_contact");
-        btns[0] = t("convo_add_from_heard");
-        btns[1] = t("convo_add_manual");
-        btns[2] = t("btn_cancel");
-        btns[3] = "";
+        btns[0] = t("convo_add_from_heard"); btns[1] = "\n";
+        btns[2] = t("convo_add_manual");     btns[3] = "\n";
+        btns[4] = t("btn_cancel");           btns[5] = "";
     } else {  // Channels
         title   = t("convo_add_channel");
-        btns[0] = t("chan_type_public");
-        btns[1] = t("chan_type_hashtag");
-        btns[2] = t("chan_type_private");
-        btns[3] = "";  // (Cancel via tapping outside / back)
+        btns[0] = t("chan_type_public");  btns[1] = "\n";
+        btns[2] = t("chan_type_hashtag"); btns[3] = "\n";
+        btns[4] = t("chan_type_private"); btns[5] = "";
     }
 
     lv_obj_t* mbox = lv_msgbox_create(NULL, title, "", btns, false);
@@ -875,10 +874,9 @@ void SettingsScreen::convoRowCb(lv_event_t* e) {
 
     static char body[96];
     snprintf(body, sizeof(body), t("convo_del_confirm"), name.c_str());
-    static const char* btns[3];
-    btns[0] = t("btn_cancel");
-    btns[1] = t("btn_delete");
-    btns[2] = "";
+    static const char* btns[4];
+    btns[0] = t("btn_cancel"); btns[1] = "\n";
+    btns[2] = t("btn_delete"); btns[3] = "";
 
     lv_obj_t* mbox = lv_msgbox_create(NULL, t("convo_del_title"), body, btns, false);
     lv_obj_center(mbox);
@@ -928,10 +926,9 @@ void SettingsScreen::convoRowCb(lv_event_t* e) {
 }
 
 void SettingsScreen::showConvoRebootConfirm() {
-    static const char* btns[3];
-    btns[0] = t("reboot_now");
-    btns[1] = t("btn_ok");
-    btns[2] = "";
+    static const char* btns[4];
+    btns[0] = t("reboot_now"); btns[1] = "\n";
+    btns[2] = t("btn_ok");     btns[3] = "";
     lv_obj_t* mbox = lv_msgbox_create(NULL, "", t("heard_saved_msg"), btns, false);
     lv_obj_center(mbox);
     lv_obj_set_style_bg_color(mbox, theme::BG_SECONDARY(), 0);
@@ -1012,17 +1009,21 @@ void SettingsScreen::openConvoEditor(ConvoField f) {
     lv_obj_align(_convoTextarea, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44);
     lv_obj_set_style_border_color(_convoTextarea, theme::ACCENT(), LV_STATE_FOCUSED);
 
+    // Buttons stacked full-width (one per row) so labels stay readable on the
+    // narrow screens — Save / Generate (PSK only) / Cancel.
     lv_obj_t* btnRow = lv_obj_create(_convoOverlay);
-    lv_obj_set_size(btnRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_size(btnRow, theme::CONTENT_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
-    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_all(btnRow, 0, 0);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(btnRow, theme::PAD_MEDIUM, 0);
+    lv_obj_set_style_pad_row(btnRow, theme::PAD_SMALL, 0);
     lv_obj_align(btnRow, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44 + 52);
     lv_obj_clear_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* save = lv_btn_create(btnRow);
+    lv_obj_set_width(save, LV_PCT(100));
     lv_obj_set_style_bg_color(save, theme::ACCENT(), 0);
     lv_obj_set_style_bg_color(save, theme::BG_SECONDARY(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(save, convoEditorReadyCb, LV_EVENT_CLICKED, this);
@@ -1031,6 +1032,7 @@ void SettingsScreen::openConvoEditor(ConvoField f) {
     lv_obj_center(saveLbl);
 
     _convoGenBtn = lv_btn_create(btnRow);
+    lv_obj_set_width(_convoGenBtn, LV_PCT(100));
     lv_obj_set_style_bg_color(_convoGenBtn, theme::BG_SECONDARY(), 0);
     lv_obj_set_style_bg_color(_convoGenBtn, theme::ACCENT(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(_convoGenBtn, pskGenerateCb, LV_EVENT_CLICKED, this);
@@ -1039,6 +1041,7 @@ void SettingsScreen::openConvoEditor(ConvoField f) {
     lv_obj_center(genLbl);
 
     lv_obj_t* cancel = lv_btn_create(btnRow);
+    lv_obj_set_width(cancel, LV_PCT(100));
     lv_obj_set_style_bg_color(cancel, theme::BG_SECONDARY(), 0);
     lv_obj_set_style_bg_color(cancel, theme::ACCENT(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(cancel, [](lv_event_t* ev) {
