@@ -1608,16 +1608,17 @@ void SettingsScreen::timezoneRowCb(lv_event_t* e) {
     lv_obj_set_style_border_color(self->_timezoneTextarea, theme::ACCENT(), LV_STATE_FOCUSED);
 
     lv_obj_t* btnRow = lv_obj_create(self->_timezoneOverlay);
-    lv_obj_set_size(btnRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_size(btnRow, theme::CONTENT_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
-    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(btnRow, theme::PAD_MEDIUM, 0);
+    lv_obj_set_style_pad_row(btnRow, theme::PAD_SMALL, 0);
     lv_obj_align(btnRow, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44 + 52);
     lv_obj_clear_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* save = lv_btn_create(btnRow);
+    lv_obj_set_width(save, LV_PCT(100));
     lv_obj_set_style_bg_color(save, theme::ACCENT(), 0);
     lv_obj_set_style_bg_color(save, theme::BG_SECONDARY(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(save, timezoneReadyCb, LV_EVENT_CLICKED, self);
@@ -1626,6 +1627,7 @@ void SettingsScreen::timezoneRowCb(lv_event_t* e) {
     lv_obj_center(saveLbl);
 
     lv_obj_t* cancel = lv_btn_create(btnRow);
+    lv_obj_set_width(cancel, LV_PCT(100));
     lv_obj_set_style_bg_color(cancel, theme::BG_SECONDARY(), 0);
     lv_obj_set_style_bg_color(cancel, theme::ACCENT(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(cancel, [](lv_event_t* ev) {
@@ -1814,16 +1816,17 @@ void SettingsScreen::pinRowCb(lv_event_t* e) {
     lv_obj_set_style_border_color(self->_pinTextarea, theme::ACCENT(), LV_STATE_FOCUSED);
 
     lv_obj_t* btnRow = lv_obj_create(self->_pinOverlay);
-    lv_obj_set_size(btnRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_size(btnRow, theme::CONTENT_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
-    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(btnRow, theme::PAD_MEDIUM, 0);
+    lv_obj_set_style_pad_row(btnRow, theme::PAD_SMALL, 0);
     lv_obj_align(btnRow, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44 + 52);
     lv_obj_clear_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* save = lv_btn_create(btnRow);
+    lv_obj_set_width(save, LV_PCT(100));
     lv_obj_set_style_bg_color(save, theme::ACCENT(), 0);
     lv_obj_set_style_bg_color(save, theme::BG_SECONDARY(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(save, pinReadyCb, LV_EVENT_CLICKED, self);
@@ -1832,6 +1835,7 @@ void SettingsScreen::pinRowCb(lv_event_t* e) {
     lv_obj_center(saveLbl);
 
     lv_obj_t* cancel = lv_btn_create(btnRow);
+    lv_obj_set_width(cancel, LV_PCT(100));
     lv_obj_set_style_bg_color(cancel, theme::BG_SECONDARY(), 0);
     lv_obj_set_style_bg_color(cancel, theme::ACCENT(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(cancel, [](lv_event_t* ev) {
@@ -2053,16 +2057,17 @@ void SettingsScreen::sosKeywordRowCb(lv_event_t* e) {
     lv_obj_set_style_border_color(self->_sosKeywordTextarea, theme::ACCENT(), LV_STATE_FOCUSED);
 
     lv_obj_t* btnRow = lv_obj_create(self->_sosKeywordOverlay);
-    lv_obj_set_size(btnRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_size(btnRow, theme::CONTENT_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
-    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(btnRow, theme::PAD_MEDIUM, 0);
+    lv_obj_set_style_pad_row(btnRow, theme::PAD_SMALL, 0);
     lv_obj_align(btnRow, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44 + 52);
     lv_obj_clear_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* save = lv_btn_create(btnRow);
+    lv_obj_set_width(save, LV_PCT(100));
     lv_obj_set_style_bg_color(save, theme::ACCENT(), 0);
     lv_obj_set_style_bg_color(save, theme::BG_SECONDARY(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(save, sosKeywordReadyCb, LV_EVENT_CLICKED, self);
@@ -2071,6 +2076,7 @@ void SettingsScreen::sosKeywordRowCb(lv_event_t* e) {
     lv_obj_center(saveLbl);
 
     lv_obj_t* cancel = lv_btn_create(btnRow);
+    lv_obj_set_width(cancel, LV_PCT(100));
     lv_obj_set_style_bg_color(cancel, theme::BG_SECONDARY(), 0);
     lv_obj_set_style_bg_color(cancel, theme::ACCENT(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(cancel, [](lv_event_t* ev) {
@@ -2284,16 +2290,17 @@ void SettingsScreen::nameRowCb(lv_event_t* e) {
     lv_obj_set_style_border_color(self->_nameTextarea, theme::ACCENT(), LV_STATE_FOCUSED);
 
     lv_obj_t* btnRow = lv_obj_create(self->_nameOverlay);
-    lv_obj_set_size(btnRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_size(btnRow, theme::CONTENT_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
-    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(btnRow, theme::PAD_MEDIUM, 0);
+    lv_obj_set_style_pad_row(btnRow, theme::PAD_SMALL, 0);
     lv_obj_align(btnRow, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44 + 52);
     lv_obj_clear_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* save = lv_btn_create(btnRow);
+    lv_obj_set_width(save, LV_PCT(100));
     lv_obj_set_style_bg_color(save, theme::ACCENT(), 0);
     lv_obj_set_style_bg_color(save, theme::BG_SECONDARY(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(save, nameReadyCb, LV_EVENT_CLICKED, self);
@@ -2302,6 +2309,7 @@ void SettingsScreen::nameRowCb(lv_event_t* e) {
     lv_obj_center(saveLbl);
 
     lv_obj_t* cancel = lv_btn_create(btnRow);
+    lv_obj_set_width(cancel, LV_PCT(100));
     lv_obj_set_style_bg_color(cancel, theme::BG_SECONDARY(), 0);
     lv_obj_set_style_bg_color(cancel, theme::ACCENT(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(cancel, [](lv_event_t* ev) {
@@ -2396,16 +2404,17 @@ void SettingsScreen::bootTextRowCb(lv_event_t* e) {
     lv_obj_set_style_border_color(self->_bootTextTextarea, theme::ACCENT(), LV_STATE_FOCUSED);
 
     lv_obj_t* btnRow = lv_obj_create(self->_bootTextOverlay);
-    lv_obj_set_size(btnRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_size(btnRow, theme::CONTENT_WIDTH, LV_SIZE_CONTENT);
     lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
     lv_obj_set_style_border_width(btnRow, 0, 0);
-    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(btnRow, theme::PAD_MEDIUM, 0);
+    lv_obj_set_style_pad_row(btnRow, theme::PAD_SMALL, 0);
     lv_obj_align(btnRow, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44 + 52);
     lv_obj_clear_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t* save = lv_btn_create(btnRow);
+    lv_obj_set_width(save, LV_PCT(100));
     lv_obj_set_style_bg_color(save, theme::ACCENT(), 0);
     lv_obj_set_style_bg_color(save, theme::BG_SECONDARY(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(save, bootTextReadyCb, LV_EVENT_CLICKED, self);
@@ -2414,6 +2423,7 @@ void SettingsScreen::bootTextRowCb(lv_event_t* e) {
     lv_obj_center(saveLbl);
 
     lv_obj_t* cancel = lv_btn_create(btnRow);
+    lv_obj_set_width(cancel, LV_PCT(100));
     lv_obj_set_style_bg_color(cancel, theme::BG_SECONDARY(), 0);
     lv_obj_set_style_bg_color(cancel, theme::ACCENT(), LV_STATE_FOCUSED);
     lv_obj_add_event_cb(cancel, [](lv_event_t* ev) {
