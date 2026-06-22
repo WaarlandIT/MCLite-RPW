@@ -859,6 +859,17 @@ void SettingsScreen::openButtonModal(ConvoModal purpose) {
             title = t("heard_saved_msg");
             g_btnModalLabels = { t("reboot_now"), t("btn_ok") };
             break;
+        case ConvoModal::OffgridConfirm: {
+            const auto& cfg = ConfigManager::instance().config();
+            bool enabling = !cfg.offgrid.enabled;
+            char buf[192];
+            if (enabling) snprintf(buf, sizeof(buf), t("offgrid_confirm_on_body"),
+                                   (int)mclite::offgridFreqFor(cfg.radio.frequency));
+            else          snprintf(buf, sizeof(buf), t("offgrid_confirm_off_body"), cfg.radio.frequency);
+            title = buf;
+            g_btnModalLabels = { t("reboot_now"), t("btn_cancel") };
+            break;
+        }
         default: return;
     }
 
@@ -976,6 +987,16 @@ void SettingsScreen::convoModalChosenCb(lv_event_t* e) {
     if (purpose == ConvoModal::RebootConfirm) {
         if (idx == 0) { delay(200); ESP.restart(); }
         else lv_async_call([](void* p){ ((SettingsScreen*)p)->show(); }, self);
+        return;
+    }
+
+    if (purpose == ConvoModal::OffgridConfirm) {
+        if (idx == 0) {  // Reboot now — flip offgrid, persist, restart
+            auto& mgr = ConfigManager::instance();
+            mgr.config().offgrid.enabled = !mgr.config().offgrid.enabled;
+            mgr.save();
+            delay(200); ESP.restart();
+        } else lv_async_call([](void* p){ ((SettingsScreen*)p)->show(); }, self);
         return;
     }
 }
@@ -1278,46 +1299,8 @@ void SettingsScreen::heardAdvertsRowCb(lv_event_t* e) {
 // ─────────────────────────── Offgrid confirm (Radio) ───────────────────────────
 
 void SettingsScreen::offgridRowCb(lv_event_t* e) {
-    const auto& cfg = ConfigManager::instance().config();
-    bool enabling = !cfg.offgrid.enabled;
-    float og = mclite::offgridFreqFor(cfg.radio.frequency);
-
-    static char bodyBuf[192];
-    if (enabling) snprintf(bodyBuf, sizeof(bodyBuf), t("offgrid_confirm_on_body"), (int)og);
-    else          snprintf(bodyBuf, sizeof(bodyBuf), t("offgrid_confirm_off_body"), cfg.radio.frequency);
-
-    static const char* btns[3];
-    btns[0] = t("btn_cancel");
-    btns[1] = t("reboot_now");
-    btns[2] = "";
-
-    const char* title = enabling ? t("offgrid_confirm_on_title") : t("offgrid_confirm_off_title");
-    lv_obj_t* msgbox = lv_msgbox_create(NULL, title, bodyBuf, btns, false);
-    lv_obj_center(msgbox);
-    lv_obj_set_style_bg_color(msgbox, theme::BG_SECONDARY(), 0);
-    lv_obj_set_style_text_color(msgbox, theme::TEXT_PRIMARY(), 0);
-    lv_obj_set_style_text_font(msgbox, FONT_HEADING, 0);
-
-    lv_obj_t* btnm = lv_msgbox_get_btns(msgbox);
-    if (btnm) UIManager::instance().switchToModalGroup(btnm);
-
-    lv_obj_add_event_cb(msgbox, [](lv_event_t* ev) {
-        lv_obj_t* mbox = lv_event_get_current_target(ev);
-        uint16_t btnIdx = lv_msgbox_get_active_btn(mbox);
-        if (btnIdx == LV_BTNMATRIX_BTN_NONE) return;
-        if (btnIdx == 1) {
-            auto& mgr = ConfigManager::instance();
-            mgr.config().offgrid.enabled = !mgr.config().offgrid.enabled;
-            mgr.save();
-            UIManager::instance().restoreFromModalGroup();
-            lv_msgbox_close(mbox);
-            delay(200);
-            ESP.restart();
-            return;
-        }
-        UIManager::instance().restoreFromModalGroup();
-        lv_msgbox_close(mbox);
-    }, LV_EVENT_VALUE_CHANGED, NULL);
+    SettingsScreen* self = (SettingsScreen*)lv_event_get_user_data(e);
+    if (self) self->openButtonModal(ConvoModal::OffgridConfirm);
 }
 
 // ─────────────────────────── Generic bool toggles ───────────────────────────

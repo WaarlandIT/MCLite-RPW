@@ -200,7 +200,7 @@ private:
 
     // Vertical button-list modal (picker styling: MODAL_TEXT_WIDTH btnmatrix,
     // one button per row) — replaces narrow side-by-side lv_msgbox dialogs.
-    enum class ConvoModal { None, AddChooser, DeleteConfirm, RebootConfirm };
+    enum class ConvoModal { None, AddChooser, DeleteConfirm, RebootConfirm, OffgridConfirm };
     ConvoModal _convoModal = ConvoModal::None;
     lv_obj_t*  _convoModalBtnm = nullptr;
     void openButtonModal(ConvoModal purpose);
