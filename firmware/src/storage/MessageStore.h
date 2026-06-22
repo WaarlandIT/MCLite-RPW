@@ -84,6 +84,11 @@ public:
     // ROOM-only: persist sender_timestamp as syncSince. Triggers saveHistory().
     void updateRoomSyncSince(const ConvoId& id, uint32_t timestamp);
 
+    // Drop a conversation's in-memory cache AND its on-SD history file. Used when
+    // a contact/channel/room is removed on-device so a re-added same-id entry
+    // can't inherit stale history. No-op if neither exists.
+    void removeConversation(const ConvoId& id);
+
     static MessageStore& instance();
 
 private:

@@ -172,6 +172,22 @@ public:
     // MCLiteMesh::start() registers it with MeshCore.
     bool appendDiscoveredContact(const ContactConfig& cc);
 
+    // On-device add/remove for conversations (gated by permissions.conversation_management
+    // in the UI). All write config immediately via save() and roll back on SD failure;
+    // changes only take effect after reboot (stores register with MeshCore at boot).
+    // appendChannel: caps at MAX_CHANNELS, name unique (case-insensitive); a "public"-type
+    //   channel is forced to the canonical name/PSK and refused if one already exists; a
+    //   "private" channel requires a 32-hex PSK; hashtag PSK is derived at boot (psk left
+    //   empty). Assigns index = vector position.
+    // appendRoom: caps at MAX_ROOM_SERVERS, refuses duplicate pubkey (case-insensitive hex).
+    // removeChannelAt: erases then renumbers remaining channels' index to their position.
+    bool appendChannel(const ChannelConfig& cc);
+    bool appendRoom(const RoomServerConfig& rc);
+    bool removeContactAt(size_t i);
+    bool removeChannelAt(size_t i);
+    bool removeRoomAt(size_t i);
+    bool hasPublicChannel() const;
+
     AppConfig& config() { return _config; }
     const AppConfig& config() const { return _config; }
 

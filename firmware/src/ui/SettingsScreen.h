@@ -23,6 +23,14 @@ enum class BoolField {
     SaveHistory = 1, RequestTelemetry, AutoTelemetry, CannedMessages, AllowMute, GpsEnabled
 };
 
+// Steps in the on-device conversation-add flows (one shared text editor, walked
+// step by step). Gated by permissions.conversation_management.
+enum class ConvoField {
+    ContactAlias, ContactKey,
+    ChanHashName, ChanPrivName, ChanPrivPsk,
+    RoomName, RoomKey, RoomPass
+};
+
 class SettingsScreen {
 public:
     void create(lv_obj_t* parent);
@@ -173,7 +181,30 @@ private:
     void buildGps();
     void buildBattery();
     void buildSecurity();
-    void buildConvoList();  // Contacts / Channels / Rooms read-only views
+    void buildConvoList();  // Contacts / Channels / Rooms (read-only, or add/remove when permitted)
+
+    // On-device add/remove of conversations (permissions.conversation_management).
+    // One shared text-editor overlay walked step-by-step per add flow; changes
+    // write config immediately and apply on reboot (showConvoRebootConfirm).
+    lv_obj_t* _convoOverlay  = nullptr;
+    lv_obj_t* _convoTextarea = nullptr;
+    lv_obj_t* _convoTitleLbl = nullptr;
+    lv_obj_t* _convoGenBtn   = nullptr;  // "Generate" — private-channel PSK only
+#ifdef PLATFORM_TWATCH
+    lv_obj_t* _convoKbd      = nullptr;
+#endif
+    ConvoField _convoField   = ConvoField::ContactAlias;
+    String _convPendName;   // alias / channel name / room name carried between steps
+    String _convPendKey;    // room public key carried between steps
+    bool convoManageEnabled() const;     // permission + canEdit gate
+    void openConvoEditor(ConvoField f);  // build overlay, then setConvoField(f)
+    void setConvoField(ConvoField f);    // retitle/clear textarea for the given step
+    void hideConvoEditor();
+    void showConvoRebootConfirm();       // "Reboot now / OK" after a config change
+    static void convoAddRowCb(lv_event_t* e);     // "Add …" row → chooser / picker
+    static void convoRowCb(lv_event_t* e);        // tap an entry → confirm delete
+    static void convoEditorReadyCb(lv_event_t* e);// validate + advance/commit
+    static void pskGenerateCb(lv_event_t* e);     // fill a random 32-hex PSK
 
     // Small row helpers used across sections (cut the boilerplate).
     lv_obj_t* addReadOnlyRow(const char* label, const String& value);

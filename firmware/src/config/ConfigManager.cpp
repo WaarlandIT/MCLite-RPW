@@ -620,6 +620,121 @@ bool ConfigManager::appendDiscoveredContact(const ContactConfig& cc) {
     return true;
 }
 
+// Local helper: true if s is exactly `len` hex digits.
+static bool isHexLen(const String& s, size_t len) {
+    if (s.length() != len) return false;
+    for (size_t i = 0; i < len; i++) {
+        char c = s[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')))
+            return false;
+    }
+    return true;
+}
+
+bool ConfigManager::hasPublicChannel() const {
+    for (const auto& ch : _config.channels) if (ch.type == "public") return true;
+    return false;
+}
+
+bool ConfigManager::appendChannel(const ChannelConfig& in) {
+    if ((int)_config.channels.size() >= defaults::MAX_CHANNELS) {
+        LOGF("[Config] appendChannel: at cap %d/%d\n",
+                      (int)_config.channels.size(), defaults::MAX_CHANNELS);
+        return false;
+    }
+    ChannelConfig cc = in;
+    if (cc.type == "public") {
+        if (hasPublicChannel()) { LOGLN("[Config] appendChannel: public already exists"); return false; }
+        cc.name = "Public";
+        cc.psk  = "8b3387e9c5cdea6ac9e5edbaa115cd72";
+        cc.allowSos = false;
+        cc.sendSos  = false;
+    } else if (cc.type == "private") {
+        // Private channels need an explicit PSK (16 or 32 raw bytes -> 32/64 hex).
+        if (!(isHexLen(cc.psk, 32) || isHexLen(cc.psk, 64))) {
+            LOGLN("[Config] appendChannel: invalid private PSK");
+            return false;
+        }
+    } else {  // hashtag — PSK derived at boot from the (sanitized) name; psk stays empty
+        if (cc.name.length() == 0) { LOGLN("[Config] appendChannel: empty name"); return false; }
+    }
+    for (const auto& ex : _config.channels) {
+        if (ex.name.equalsIgnoreCase(cc.name)) {
+            LOGF("[Config] appendChannel: duplicate name=%s\n", cc.name.c_str());
+            return false;
+        }
+    }
+    cc.index = (uint8_t)_config.channels.size();
+    _config.channels.push_back(cc);
+    if (!save()) {
+        _config.channels.pop_back();
+        LOGLN("[Config] appendChannel: save failed");
+        return false;
+    }
+    LOGF("[Config] Saved channel: %s\n", cc.name.c_str());
+    return true;
+}
+
+bool ConfigManager::appendRoom(const RoomServerConfig& in) {
+    if ((int)_config.roomServers.size() >= defaults::MAX_ROOM_SERVERS) {
+        LOGF("[Config] appendRoom: at cap %d/%d\n",
+                      (int)_config.roomServers.size(), defaults::MAX_ROOM_SERVERS);
+        return false;
+    }
+    RoomServerConfig rc = in;
+    if (!isHexLen(rc.publicKey, 64)) { LOGLN("[Config] appendRoom: invalid pubkey"); return false; }
+    rc.publicKey.toLowerCase();
+    if (rc.password.length() > 15) rc.password = rc.password.substring(0, 15);
+    for (const auto& ex : _config.roomServers) {
+        if (ex.publicKey.equalsIgnoreCase(rc.publicKey)) {
+            LOGF("[Config] appendRoom: duplicate pubkey for %s\n", rc.name.c_str());
+            return false;
+        }
+    }
+    _config.roomServers.push_back(rc);
+    if (!save()) {
+        _config.roomServers.pop_back();
+        LOGLN("[Config] appendRoom: save failed");
+        return false;
+    }
+    LOGF("[Config] Saved room: %s\n", rc.name.c_str());
+    return true;
+}
+
+bool ConfigManager::removeContactAt(size_t i) {
+    if (i >= _config.contacts.size()) return false;
+    ContactConfig saved = _config.contacts[i];
+    _config.contacts.erase(_config.contacts.begin() + i);
+    if (!save()) {
+        _config.contacts.insert(_config.contacts.begin() + i, saved);  // rollback
+        return false;
+    }
+    return true;
+}
+
+bool ConfigManager::removeChannelAt(size_t i) {
+    if (i >= _config.channels.size()) return false;
+    std::vector<ChannelConfig> backup = _config.channels;
+    _config.channels.erase(_config.channels.begin() + i);
+    for (size_t k = 0; k < _config.channels.size(); k++) _config.channels[k].index = (uint8_t)k;
+    if (!save()) {
+        _config.channels = backup;  // rollback (restores order + indices)
+        return false;
+    }
+    return true;
+}
+
+bool ConfigManager::removeRoomAt(size_t i) {
+    if (i >= _config.roomServers.size()) return false;
+    RoomServerConfig saved = _config.roomServers[i];
+    _config.roomServers.erase(_config.roomServers.begin() + i);
+    if (!save()) {
+        _config.roomServers.insert(_config.roomServers.begin() + i, saved);  // rollback
+        return false;
+    }
+    return true;
+}
+
 bool ConfigManager::save() {
     auto& sd = SDCard::instance();
     if (!sd.isMounted()) return false;

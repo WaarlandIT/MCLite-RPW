@@ -844,6 +844,108 @@ void test_append_discovered_contact_refuses_at_cap() {
     TEST_ASSERT_EQUAL_INT(defaults::MAX_CHAT_CONTACTS, (int)cfg->config().contacts.size());
 }
 
+// ═══ channel / room add + remove ═══
+
+void test_append_channel_hashtag_assigns_index() {
+    ChannelConfig a; a.name = "#alpha"; a.type = "hashtag";
+    ChannelConfig b; b.name = "#beta";  b.type = "hashtag";
+    TEST_ASSERT_TRUE(cfg->appendChannel(a));
+    TEST_ASSERT_TRUE(cfg->appendChannel(b));
+    TEST_ASSERT_EQUAL_INT(2, (int)cfg->config().channels.size());
+    TEST_ASSERT_EQUAL_UINT8(0, cfg->config().channels[0].index);
+    TEST_ASSERT_EQUAL_UINT8(1, cfg->config().channels[1].index);
+}
+
+void test_append_channel_public_only_one() {
+    ChannelConfig p; p.type = "public";
+    TEST_ASSERT_TRUE(cfg->appendChannel(p));
+    TEST_ASSERT_EQUAL_STRING("Public", cfg->config().channels[0].name.c_str());
+    TEST_ASSERT_EQUAL_STRING("8b3387e9c5cdea6ac9e5edbaa115cd72", cfg->config().channels[0].psk.c_str());
+    ChannelConfig p2; p2.type = "public";
+    TEST_ASSERT_FALSE(cfg->appendChannel(p2));  // refuse second public
+    TEST_ASSERT_EQUAL_INT(1, (int)cfg->config().channels.size());
+}
+
+void test_append_channel_private_requires_psk() {
+    ChannelConfig bad; bad.name = "priv"; bad.type = "private"; bad.psk = "xyz";
+    TEST_ASSERT_FALSE(cfg->appendChannel(bad));
+    ChannelConfig ok; ok.name = "priv"; ok.type = "private";
+    ok.psk = "0123456789abcdef0123456789abcdef";  // 32 hex
+    TEST_ASSERT_TRUE(cfg->appendChannel(ok));
+    TEST_ASSERT_EQUAL_INT(1, (int)cfg->config().channels.size());
+}
+
+void test_append_channel_refuses_duplicate_name() {
+    ChannelConfig a; a.name = "#dup"; a.type = "hashtag";
+    TEST_ASSERT_TRUE(cfg->appendChannel(a));
+    ChannelConfig b; b.name = "#DUP"; b.type = "hashtag";  // case-insensitive clash
+    TEST_ASSERT_FALSE(cfg->appendChannel(b));
+    TEST_ASSERT_EQUAL_INT(1, (int)cfg->config().channels.size());
+}
+
+void test_append_channel_refuses_at_cap() {
+    for (int i = 0; i < defaults::MAX_CHANNELS; i++) {
+        ChannelConfig c; c.name = "#c" + String(i); c.type = "hashtag";
+        TEST_ASSERT_TRUE(cfg->appendChannel(c));
+    }
+    ChannelConfig overflow; overflow.name = "#over"; overflow.type = "hashtag";
+    TEST_ASSERT_FALSE(cfg->appendChannel(overflow));
+    TEST_ASSERT_EQUAL_INT(defaults::MAX_CHANNELS, (int)cfg->config().channels.size());
+}
+
+void test_remove_channel_reindexes() {
+    for (int i = 0; i < 3; i++) {
+        ChannelConfig c; c.name = "#c" + String(i); c.type = "hashtag";
+        cfg->appendChannel(c);
+    }
+    TEST_ASSERT_TRUE(cfg->removeChannelAt(0));  // drop #c0
+    TEST_ASSERT_EQUAL_INT(2, (int)cfg->config().channels.size());
+    TEST_ASSERT_EQUAL_STRING("#c1", cfg->config().channels[0].name.c_str());
+    TEST_ASSERT_EQUAL_UINT8(0, cfg->config().channels[0].index);  // re-indexed
+    TEST_ASSERT_EQUAL_UINT8(1, cfg->config().channels[1].index);
+    TEST_ASSERT_FALSE(cfg->removeChannelAt(9));  // out of range
+}
+
+void test_append_room_dup_pubkey_refused() {
+    RoomServerConfig r; r.name = "room1";
+    r.publicKey = "AA11223344556677889900112233445566778899001122334455667788990011";  // 64 hex
+    TEST_ASSERT_TRUE(cfg->appendRoom(r));
+    TEST_ASSERT_EQUAL_INT(1, (int)cfg->config().roomServers.size());
+    // stored lowercased
+    TEST_ASSERT_EQUAL_STRING("aa11223344556677889900112233445566778899001122334455667788990011",
+                             cfg->config().roomServers[0].publicKey.c_str());
+    RoomServerConfig dup; dup.name = "room2"; dup.publicKey = r.publicKey;  // same key (upper)
+    TEST_ASSERT_FALSE(cfg->appendRoom(dup));
+    RoomServerConfig bad; bad.name = "bad"; bad.publicKey = "tooshort";
+    TEST_ASSERT_FALSE(cfg->appendRoom(bad));
+    TEST_ASSERT_EQUAL_INT(1, (int)cfg->config().roomServers.size());
+}
+
+void test_append_room_refuses_at_cap() {
+    for (int i = 0; i < defaults::MAX_ROOM_SERVERS; i++) {
+        RoomServerConfig r; r.name = "r" + String(i);
+        char k[65]; for (int j = 0; j < 64; j++) k[j] = "0123456789abcdef"[(i * 7 + j) % 16]; k[64] = 0;
+        r.publicKey = String(k);
+        TEST_ASSERT_TRUE(cfg->appendRoom(r));
+    }
+    RoomServerConfig over; over.name = "over";
+    over.publicKey = "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    TEST_ASSERT_FALSE(cfg->appendRoom(over));
+    TEST_ASSERT_EQUAL_INT(defaults::MAX_ROOM_SERVERS, (int)cfg->config().roomServers.size());
+}
+
+void test_remove_contact_and_room() {
+    ContactConfig c; c.alias = "x"; c.publicKey = "abcd"; TEST_ASSERT_TRUE(cfg->appendDiscoveredContact(c));
+    TEST_ASSERT_TRUE(cfg->removeContactAt(0));
+    TEST_ASSERT_EQUAL_INT(0, (int)cfg->config().contacts.size());
+    TEST_ASSERT_FALSE(cfg->removeContactAt(0));  // empty now
+    RoomServerConfig r; r.name = "room"; r.publicKey =
+        "0011223344556677889900112233445566778899001122334455667788990011";
+    TEST_ASSERT_TRUE(cfg->appendRoom(r));
+    TEST_ASSERT_TRUE(cfg->removeRoomAt(0));
+    TEST_ASSERT_EQUAL_INT(0, (int)cfg->config().roomServers.size());
+}
+
 int main() {
     UNITY_BEGIN();
 
@@ -985,6 +1087,17 @@ int main() {
     RUN_TEST(test_append_discovered_contact_succeeds);
     RUN_TEST(test_append_discovered_contact_refuses_duplicate);
     RUN_TEST(test_append_discovered_contact_refuses_at_cap);
+
+    // channel/room add + remove
+    RUN_TEST(test_append_channel_hashtag_assigns_index);
+    RUN_TEST(test_append_channel_public_only_one);
+    RUN_TEST(test_append_channel_private_requires_psk);
+    RUN_TEST(test_append_channel_refuses_duplicate_name);
+    RUN_TEST(test_append_channel_refuses_at_cap);
+    RUN_TEST(test_remove_channel_reindexes);
+    RUN_TEST(test_append_room_dup_pubkey_refused);
+    RUN_TEST(test_append_room_refuses_at_cap);
+    RUN_TEST(test_remove_contact_and_room);
 
     return UNITY_END();
 }

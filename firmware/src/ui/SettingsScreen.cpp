@@ -21,6 +21,7 @@
 #include "../util/offgrid.h"
 #include "../util/locprecision.h"
 #include "../i18n/I18n.h"
+#include <esp_random.h>
 
 namespace mclite {
 
@@ -686,43 +687,81 @@ void SettingsScreen::buildSecurity() {
     addNavRowGated(t("lbl_auto_lock"), autoLockValue, autoLockRowCb, false);
 }
 
+bool SettingsScreen::convoManageEnabled() const {
+    return ConfigManager::instance().config().permissions.conversationManagement && canEdit(false);
+}
+
 void SettingsScreen::buildConvoList() {
+    const bool manage = convoManageEnabled();
+    auto& cfg = ConfigManager::instance().config();
+
     if (_section == SettingsSection::Contacts) {
-        auto& contacts = ContactStore::instance();
-        char hdr[32];
-        snprintf(hdr, sizeof(hdr), t("sec_contacts"), (int)contacts.count());
-        addSectionHeader(hdr);
-        for (size_t i = 0; i < contacts.count(); i++) {
-            const Contact* c = contacts.findByIndex(i);
-            if (!c) continue;
-            String info = c->name;
-            if (c->sendSos) info += " [SOS]";
-            if (c->allowTelemetry && c->allowLocation) info += " [GPS]";
-            addReadOnlyRow(("  " + String((int)(i + 1))).c_str(), info);
+        if (manage) {
+            char hdr[32];
+            snprintf(hdr, sizeof(hdr), t("sec_contacts"), (int)cfg.contacts.size());
+            addSectionHeader(hdr);
+            addNavRow((String(LV_SYMBOL_PLUS " ") + t("convo_add_contact")).c_str(), "", convoAddRowCb);
+            for (size_t i = 0; i < cfg.contacts.size(); i++) {
+                String info = cfg.contacts[i].alias;
+                if (cfg.contacts[i].sendSos) info += " [SOS]";
+                lv_obj_t* row = addNavRow(("  " + String((int)(i + 1))).c_str(), info, convoRowCb);
+                lv_obj_set_user_data(row, (void*)(intptr_t)i);
+            }
+        } else {
+            auto& contacts = ContactStore::instance();
+            char hdr[32];
+            snprintf(hdr, sizeof(hdr), t("sec_contacts"), (int)contacts.count());
+            addSectionHeader(hdr);
+            for (size_t i = 0; i < contacts.count(); i++) {
+                const Contact* c = contacts.findByIndex(i);
+                if (!c) continue;
+                String info = c->name;
+                if (c->sendSos) info += " [SOS]";
+                if (c->allowTelemetry && c->allowLocation) info += " [GPS]";
+                addReadOnlyRow(("  " + String((int)(i + 1))).c_str(), info);
+            }
         }
     } else if (_section == SettingsSection::Channels) {
-        auto& channels = ChannelStore::instance();
-        char hdr[32];
-        snprintf(hdr, sizeof(hdr), t("sec_channels"), (int)channels.count());
-        addSectionHeader(hdr);
-        for (const auto& ch : channels.all()) {
-            const char* prefix = ch.isPrivate() ? "  *" : "  #";
-            String info = ch.name;
-            if (ch.readOnly) info += " [read-only]";
-            if (ch.sendSos) info += " [SOS]";
-            if (ch.scope.length() > 0) info += " [scope:" + ch.scope + "]";
-            addReadOnlyRow(prefix, info);
+        if (manage) {
+            char hdr[32];
+            snprintf(hdr, sizeof(hdr), t("sec_channels"), (int)cfg.channels.size());
+            addSectionHeader(hdr);
+            addNavRow((String(LV_SYMBOL_PLUS " ") + t("convo_add_channel")).c_str(), "", convoAddRowCb);
+            for (size_t i = 0; i < cfg.channels.size(); i++) {
+                const auto& ch = cfg.channels[i];
+                const char* prefix = (ch.type == "private") ? "  *" : "  #";
+                String info = ch.name;
+                if (ch.readOnly) info += " [read-only]";
+                if (ch.sendSos) info += " [SOS]";
+                lv_obj_t* row = addNavRow(prefix, info, convoRowCb);
+                lv_obj_set_user_data(row, (void*)(intptr_t)i);
+            }
+        } else {
+            auto& channels = ChannelStore::instance();
+            char hdr[32];
+            snprintf(hdr, sizeof(hdr), t("sec_channels"), (int)channels.count());
+            addSectionHeader(hdr);
+            for (const auto& ch : channels.all()) {
+                const char* prefix = ch.isPrivate() ? "  *" : "  #";
+                String info = ch.name;
+                if (ch.readOnly) info += " [read-only]";
+                if (ch.sendSos) info += " [SOS]";
+                if (ch.scope.length() > 0) info += " [scope:" + ch.scope + "]";
+                addReadOnlyRow(prefix, info);
+            }
         }
     } else {  // Rooms
-        const auto& rooms = ConfigManager::instance().config().roomServers;
+        const auto& rooms = cfg.roomServers;
         char hdr[32];
         snprintf(hdr, sizeof(hdr), t("sec_rooms"), (int)rooms.size());
         addSectionHeader(hdr);
+        if (manage)
+            addNavRow((String(LV_SYMBOL_PLUS " ") + t("convo_add_room")).c_str(), "", convoAddRowCb);
         auto& store = MessageStore::instance();
         for (size_t i = 0; i < rooms.size(); i++) {
             String info = rooms[i].name;
             info += UIManager::instance().isRoomLoggedIn(i) ? " [online]" : " [offline]";
-            if (rooms[i].publicKey.length() == 64) {
+            if (!manage && rooms[i].publicKey.length() == 64) {
                 String shortId = rooms[i].publicKey.substring(0, 16);
                 ConvoId rid { ConvoId::ROOM, shortId };
                 if (Conversation* convo = store.getConversation(rid)) {
@@ -738,7 +777,406 @@ void SettingsScreen::buildConvoList() {
                     }
                 }
             }
-            addReadOnlyRow("  R", info);
+            if (manage) {
+                lv_obj_t* row = addNavRow("  R", info, convoRowCb);
+                lv_obj_set_user_data(row, (void*)(intptr_t)i);
+            } else {
+                addReadOnlyRow("  R", info);
+            }
+        }
+    }
+}
+
+// ─────────────────── Conversation add/remove (gated by permission) ───────────────────
+
+// "Add …" row → a type chooser (contacts/channels) or straight into the editor (rooms).
+void SettingsScreen::convoAddRowCb(lv_event_t* e) {
+    SettingsScreen* self = (SettingsScreen*)lv_event_get_user_data(e);
+    if (!self) return;
+
+    if (self->_section == SettingsSection::Rooms) {
+        self->openConvoEditor(ConvoField::RoomName);
+        return;
+    }
+
+    static const char* btns[4];
+    const char* title;
+    if (self->_section == SettingsSection::Contacts) {
+        title   = t("convo_add_contact");
+        btns[0] = t("convo_add_from_heard");
+        btns[1] = t("convo_add_manual");
+        btns[2] = t("btn_cancel");
+        btns[3] = "";
+    } else {  // Channels
+        title   = t("convo_add_channel");
+        btns[0] = t("chan_type_public");
+        btns[1] = t("chan_type_hashtag");
+        btns[2] = t("chan_type_private");
+        btns[3] = "";  // (Cancel via tapping outside / back)
+    }
+
+    lv_obj_t* mbox = lv_msgbox_create(NULL, title, "", btns, false);
+    lv_obj_center(mbox);
+    lv_obj_set_style_bg_color(mbox, theme::BG_SECONDARY(), 0);
+    lv_obj_set_style_text_color(mbox, theme::TEXT_PRIMARY(), 0);
+    lv_obj_set_style_text_font(mbox, FONT_HEADING, 0);
+    lv_obj_t* btnm = lv_msgbox_get_btns(mbox);
+    if (btnm) UIManager::instance().switchToModalGroup(btnm);
+
+    lv_obj_add_event_cb(mbox, [](lv_event_t* ev) {
+        SettingsScreen* s = (SettingsScreen*)lv_event_get_user_data(ev);
+        lv_obj_t* m = lv_event_get_current_target(ev);
+        uint16_t idx = lv_msgbox_get_active_btn(m);
+        if (idx == LV_BTNMATRIX_BTN_NONE) return;
+        bool isContacts = (s->_section == SettingsSection::Contacts);
+        UIManager::instance().restoreFromModalGroup();
+        lv_msgbox_close(m);
+
+        if (isContacts) {
+            if (idx == 0) {            // from heard adverts
+                UIManager::instance().showScreen(Screen::HEARD_ADVERTS);
+            } else if (idx == 1) {     // enter manually
+                lv_async_call([](void* p){ ((SettingsScreen*)p)->openConvoEditor(ConvoField::ContactAlias); }, s);
+            }
+        } else {  // channels
+            if (idx == 0) {            // Public — one tap
+                if (ConfigManager::instance().hasPublicChannel()) {
+                    UIManager::instance().showToast(t("chan_public_exists"));
+                } else {
+                    ChannelConfig cc; cc.type = "public";
+                    if (ConfigManager::instance().appendChannel(cc)) {
+                        lv_async_call([](void* p){ ((SettingsScreen*)p)->showConvoRebootConfirm(); }, s);
+                    } else {
+                        UIManager::instance().showToast(t("err_save_failed"));
+                    }
+                }
+            } else if (idx == 1) {     // hashtag
+                lv_async_call([](void* p){ ((SettingsScreen*)p)->openConvoEditor(ConvoField::ChanHashName); }, s);
+            } else if (idx == 2) {     // private
+                lv_async_call([](void* p){ ((SettingsScreen*)p)->openConvoEditor(ConvoField::ChanPrivName); }, s);
+            }
+        }
+    }, LV_EVENT_VALUE_CHANGED, self);
+}
+
+// Tap an existing entry → confirm delete → remove from config (+ history) → reboot prompt.
+void SettingsScreen::convoRowCb(lv_event_t* e) {
+    SettingsScreen* self = (SettingsScreen*)lv_event_get_user_data(e);
+    if (!self) return;
+    size_t idx = (size_t)(intptr_t)lv_obj_get_user_data(lv_event_get_target(e));
+    self->_convPendKey = String((int)idx);  // stash index for the confirm handler
+
+    auto& cfg = ConfigManager::instance().config();
+    String name;
+    if (self->_section == SettingsSection::Contacts && idx < cfg.contacts.size())   name = cfg.contacts[idx].alias;
+    else if (self->_section == SettingsSection::Channels && idx < cfg.channels.size()) name = cfg.channels[idx].name;
+    else if (self->_section == SettingsSection::Rooms && idx < cfg.roomServers.size()) name = cfg.roomServers[idx].name;
+    else return;
+
+    static char body[96];
+    snprintf(body, sizeof(body), t("convo_del_confirm"), name.c_str());
+    static const char* btns[3];
+    btns[0] = t("btn_cancel");
+    btns[1] = t("btn_delete");
+    btns[2] = "";
+
+    lv_obj_t* mbox = lv_msgbox_create(NULL, t("convo_del_title"), body, btns, false);
+    lv_obj_center(mbox);
+    lv_obj_set_style_bg_color(mbox, theme::BG_SECONDARY(), 0);
+    lv_obj_set_style_text_color(mbox, theme::TEXT_PRIMARY(), 0);
+    lv_obj_set_style_text_font(mbox, FONT_HEADING, 0);
+    lv_obj_t* btnm = lv_msgbox_get_btns(mbox);
+    if (btnm) UIManager::instance().switchToModalGroup(btnm);
+
+    lv_obj_add_event_cb(mbox, [](lv_event_t* ev) {
+        SettingsScreen* s = (SettingsScreen*)lv_event_get_user_data(ev);
+        lv_obj_t* m = lv_event_get_current_target(ev);
+        uint16_t b = lv_msgbox_get_active_btn(m);
+        if (b == LV_BTNMATRIX_BTN_NONE) return;
+        UIManager::instance().restoreFromModalGroup();
+        lv_msgbox_close(m);
+        if (b != 1) { lv_async_call([](void* p){ ((SettingsScreen*)p)->show(); }, s); return; }
+
+        size_t i = (size_t)s->_convPendKey.toInt();
+        auto& c = ConfigManager::instance().config();
+        bool ok = false;
+        if (s->_section == SettingsSection::Contacts && i < c.contacts.size()) {
+            // Resolve the DM ConvoId via ContactStore (advert-stable short id).
+            String b64 = c.contacts[i].publicKey;
+            ok = ConfigManager::instance().removeContactAt(i);
+            if (ok) {
+                for (const auto& sc : ContactStore::instance().all()) {
+                    if (sc.publicKeyB64.equalsIgnoreCase(b64)) {
+                        MessageStore::instance().removeConversation(ConvoId{ConvoId::DM, sc.shortId()});
+                        break;
+                    }
+                }
+            }
+        } else if (s->_section == SettingsSection::Channels && i < c.channels.size()) {
+            String chName = c.channels[i].name;
+            ok = ConfigManager::instance().removeChannelAt(i);
+            if (ok) MessageStore::instance().removeConversation(ConvoId{ConvoId::CHANNEL, chName});
+        } else if (s->_section == SettingsSection::Rooms && i < c.roomServers.size()) {
+            String shortId = c.roomServers[i].publicKey.substring(0, 16);
+            ok = ConfigManager::instance().removeRoomAt(i);
+            if (ok) MessageStore::instance().removeConversation(ConvoId{ConvoId::ROOM, shortId});
+        }
+        if (ok) lv_async_call([](void* p){ ((SettingsScreen*)p)->showConvoRebootConfirm(); }, s);
+        else { UIManager::instance().showToast(t("err_save_failed"));
+               lv_async_call([](void* p){ ((SettingsScreen*)p)->show(); }, s); }
+    }, LV_EVENT_VALUE_CHANGED, self);
+}
+
+void SettingsScreen::showConvoRebootConfirm() {
+    static const char* btns[3];
+    btns[0] = t("reboot_now");
+    btns[1] = t("btn_ok");
+    btns[2] = "";
+    lv_obj_t* mbox = lv_msgbox_create(NULL, "", t("heard_saved_msg"), btns, false);
+    lv_obj_center(mbox);
+    lv_obj_set_style_bg_color(mbox, theme::BG_SECONDARY(), 0);
+    lv_obj_set_style_text_color(mbox, theme::TEXT_PRIMARY(), 0);
+    lv_obj_set_style_text_font(mbox, FONT_HEADING, 0);
+    lv_obj_t* btnm = lv_msgbox_get_btns(mbox);
+    if (btnm) UIManager::instance().switchToModalGroup(btnm);
+    lv_obj_add_event_cb(mbox, [](lv_event_t* ev) {
+        SettingsScreen* s = (SettingsScreen*)lv_event_get_user_data(ev);
+        lv_obj_t* m = lv_event_get_current_target(ev);
+        uint16_t b = lv_msgbox_get_active_btn(m);
+        if (b == LV_BTNMATRIX_BTN_NONE) return;
+        UIManager::instance().restoreFromModalGroup();
+        lv_msgbox_close(m);
+        if (b == 0) { delay(200); ESP.restart(); }
+        else lv_async_call([](void* p){ ((SettingsScreen*)p)->show(); }, s);  // refresh list
+    }, LV_EVENT_VALUE_CHANGED, this);
+}
+
+void SettingsScreen::pskGenerateCb(lv_event_t* e) {
+    SettingsScreen* self = (SettingsScreen*)lv_event_get_user_data(e);
+    if (!self || !self->_convoTextarea) return;
+    char hex[33];
+    for (int w = 0; w < 4; w++) snprintf(hex + w * 8, 9, "%08x", (unsigned)esp_random());
+    hex[32] = '\0';
+    lv_textarea_set_text(self->_convoTextarea, hex);
+}
+
+void SettingsScreen::setConvoField(ConvoField f) {
+    _convoField = f;
+    const char* title = "";
+    uint32_t maxLen = 32;
+    bool gen = false;
+    switch (f) {
+        case ConvoField::ContactAlias: title = t("convo_enter_alias");     maxLen = 20; break;
+        case ConvoField::ContactKey:   title = t("convo_enter_pubkey");    maxLen = 64; break;
+        case ConvoField::ChanHashName: title = t("chan_enter_name");       maxLen = 24; break;
+        case ConvoField::ChanPrivName: title = t("chan_enter_name");       maxLen = 24; break;
+        case ConvoField::ChanPrivPsk:  title = t("chan_enter_psk");        maxLen = 64; gen = true; break;
+        case ConvoField::RoomName:     title = t("convo_enter_room_name"); maxLen = 20; break;
+        case ConvoField::RoomKey:      title = t("convo_enter_pubkey");    maxLen = 64; break;
+        case ConvoField::RoomPass:     title = t("convo_enter_room_pass"); maxLen = 15; break;
+    }
+    if (_convoTitleLbl) lv_label_set_text(_convoTitleLbl, title);
+    if (_convoTextarea) {
+        lv_textarea_set_text(_convoTextarea, "");
+        lv_textarea_set_max_length(_convoTextarea, maxLen);
+        lv_textarea_set_placeholder_text(_convoTextarea, title);
+    }
+    if (_convoGenBtn) {
+        if (gen) lv_obj_clear_flag(_convoGenBtn, LV_OBJ_FLAG_HIDDEN);
+        else     lv_obj_add_flag(_convoGenBtn, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+void SettingsScreen::openConvoEditor(ConvoField f) {
+    if (_convoTextarea) return;
+    _convPendName = "";
+    _convPendKey  = "";
+
+    _convoOverlay = lv_obj_create(lv_layer_top());
+    lv_obj_set_size(_convoOverlay, Display::width(), Display::height());
+    lv_obj_set_pos(_convoOverlay, 0, 0);
+    lv_obj_set_style_bg_color(_convoOverlay, theme::BG_PRIMARY(), 0);
+    lv_obj_set_style_bg_opa(_convoOverlay, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(_convoOverlay, 0, 0);
+    lv_obj_clear_flag(_convoOverlay, LV_OBJ_FLAG_SCROLLABLE);
+
+    _convoTitleLbl = lv_label_create(_convoOverlay);
+    lv_obj_set_style_text_font(_convoTitleLbl, FONT_HEADING, 0);
+    lv_obj_set_style_text_color(_convoTitleLbl, theme::TEXT_PRIMARY(), 0);
+    lv_label_set_text(_convoTitleLbl, "");
+    lv_obj_align(_convoTitleLbl, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT);
+
+    _convoTextarea = lv_textarea_create(_convoOverlay);
+    lv_textarea_set_one_line(_convoTextarea, true);
+    lv_obj_set_width(_convoTextarea, theme::CONTENT_WIDTH);
+    lv_obj_align(_convoTextarea, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44);
+    lv_obj_set_style_border_color(_convoTextarea, theme::ACCENT(), LV_STATE_FOCUSED);
+
+    lv_obj_t* btnRow = lv_obj_create(_convoOverlay);
+    lv_obj_set_size(btnRow, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_style_bg_opa(btnRow, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(btnRow, 0, 0);
+    lv_obj_set_flex_flow(btnRow, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(btnRow, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(btnRow, theme::PAD_MEDIUM, 0);
+    lv_obj_align(btnRow, LV_ALIGN_TOP_MID, 0, theme::STATUS_BAR_HEIGHT + 44 + 52);
+    lv_obj_clear_flag(btnRow, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* save = lv_btn_create(btnRow);
+    lv_obj_set_style_bg_color(save, theme::ACCENT(), 0);
+    lv_obj_set_style_bg_color(save, theme::BG_SECONDARY(), LV_STATE_FOCUSED);
+    lv_obj_add_event_cb(save, convoEditorReadyCb, LV_EVENT_CLICKED, this);
+    lv_obj_t* saveLbl = lv_label_create(save);
+    lv_label_set_text(saveLbl, t("btn_save"));
+    lv_obj_center(saveLbl);
+
+    _convoGenBtn = lv_btn_create(btnRow);
+    lv_obj_set_style_bg_color(_convoGenBtn, theme::BG_SECONDARY(), 0);
+    lv_obj_set_style_bg_color(_convoGenBtn, theme::ACCENT(), LV_STATE_FOCUSED);
+    lv_obj_add_event_cb(_convoGenBtn, pskGenerateCb, LV_EVENT_CLICKED, this);
+    lv_obj_t* genLbl = lv_label_create(_convoGenBtn);
+    lv_label_set_text(genLbl, t("chan_psk_generate"));
+    lv_obj_center(genLbl);
+
+    lv_obj_t* cancel = lv_btn_create(btnRow);
+    lv_obj_set_style_bg_color(cancel, theme::BG_SECONDARY(), 0);
+    lv_obj_set_style_bg_color(cancel, theme::ACCENT(), LV_STATE_FOCUSED);
+    lv_obj_add_event_cb(cancel, [](lv_event_t* ev) {
+        auto* s = static_cast<SettingsScreen*>(lv_event_get_user_data(ev));
+        if (s) lv_async_call([](void* p) { ((SettingsScreen*)p)->hideConvoEditor(); }, s);
+    }, LV_EVENT_CLICKED, this);
+    lv_obj_t* cxlLbl = lv_label_create(cancel);
+    lv_label_set_text(cxlLbl, t("btn_cancel"));
+    lv_obj_center(cxlLbl);
+
+    lv_group_t* g = lv_group_create();
+    _editorGroup = g;
+    lv_group_add_obj(g, _convoTextarea);
+    lv_group_add_obj(g, save);
+    lv_group_add_obj(g, _convoGenBtn);
+    lv_group_add_obj(g, cancel);
+    lv_group_focus_obj(_convoTextarea);
+    UIManager::instance().switchToModalGroup(_convoOverlay);
+    IInput::instance().attachToGroup(g);
+    lv_obj_add_event_cb(_convoTextarea, convoEditorReadyCb, LV_EVENT_READY, this);
+
+#ifdef PLATFORM_TWATCH
+    _convoKbd = lv_keyboard_create(_convoOverlay);
+    lv_keyboard_set_textarea(_convoKbd, _convoTextarea);
+    lv_keyboard_set_popovers(_convoKbd, true);
+    lv_btnmatrix_set_btn_ctrl_all(_convoKbd, LV_BTNMATRIX_CTRL_NO_REPEAT);
+    lv_obj_add_event_cb(_convoKbd, [](lv_event_t* ev) {
+        auto* self = static_cast<SettingsScreen*>(lv_event_get_user_data(ev));
+        if (!self) return;
+        lv_event_code_t code = lv_event_get_code(ev);
+        if (code == LV_EVENT_VALUE_CHANGED) {
+            lv_btnmatrix_set_btn_ctrl_all(self->_convoKbd, LV_BTNMATRIX_CTRL_NO_REPEAT);
+        } else if (code == LV_EVENT_CANCEL) {
+            lv_async_call([](void* p) { ((SettingsScreen*)p)->hideConvoEditor(); }, self);
+        }
+    }, LV_EVENT_ALL, this);
+#endif
+
+    setConvoField(f);
+}
+
+void SettingsScreen::hideConvoEditor() {
+    if (!_convoTextarea) return;
+    UIManager::instance().restoreFromModalGroup();
+    if (_editorGroup) { lv_group_del(_editorGroup); _editorGroup = nullptr; }
+#ifdef PLATFORM_TWATCH
+    _convoKbd = nullptr;
+#endif
+    _convoTextarea = nullptr;
+    _convoTitleLbl = nullptr;
+    _convoGenBtn   = nullptr;
+    lv_obj_del_async(_convoOverlay);
+    _convoOverlay = nullptr;
+    if (_screen) show();
+}
+
+// Trim + lowercase helpers local to the convo editor.
+namespace {
+String convoTrim(const String& in) {
+    const char* s = in.c_str();
+    int len = (int)strlen(s), l = 0, r = len - 1;
+    while (l <= r && isspace((unsigned char)s[l])) ++l;
+    while (r >= l && isspace((unsigned char)s[r])) --r;
+    return (l > 0 || r < len - 1) ? in.substring(l, r + 1) : in;
+}
+bool isHexN(const String& s, int n) {
+    if ((int)s.length() != n) return false;
+    for (int i = 0; i < n; i++) { char c = s[i];
+        if (!((c>='0'&&c<='9')||(c>='a'&&c<='f')||(c>='A'&&c<='F'))) return false; }
+    return true;
+}
+}  // namespace
+
+void SettingsScreen::convoEditorReadyCb(lv_event_t* e) {
+    SettingsScreen* self = (SettingsScreen*)lv_event_get_user_data(e);
+    if (!self || !self->_convoTextarea) return;
+    String txt = convoTrim(String(lv_textarea_get_text(self->_convoTextarea)));
+    auto& mgr = ConfigManager::instance();
+    auto& cfg = mgr.config();
+    auto commit = [self](bool ok, const char* errKey) {
+        if (ok) { lv_async_call([](void* p){ auto* s=(SettingsScreen*)p; s->hideConvoEditor(); s->showConvoRebootConfirm(); }, self); }
+        else    { UIManager::instance().showToast(t(errKey)); }
+    };
+
+    switch (self->_convoField) {
+        case ConvoField::ContactAlias:
+            if (txt.length() == 0) { UIManager::instance().showToast(t("chan_name_invalid")); return; }
+            self->_convPendName = txt;
+            self->setConvoField(ConvoField::ContactKey);
+            break;
+        case ConvoField::ContactKey: {
+            txt.toLowerCase();
+            if (!isHexN(txt, 64)) { UIManager::instance().showToast(t("err_bad_pubkey")); return; }
+            if ((int)cfg.contacts.size() >= defaults::MAX_CHAT_CONTACTS) { UIManager::instance().showToast(t("err_at_cap")); return; }
+            if (mgr.hasContactByPubkeyHex(txt)) { UIManager::instance().showToast(t("err_duplicate")); return; }
+            ContactConfig cc; cc.alias = self->_convPendName; cc.publicKey = txt; cc.fromDiscovery = false;
+            commit(mgr.appendDiscoveredContact(cc), "err_save_failed");
+            break;
+        }
+        case ConvoField::ChanHashName: {
+            String n; for (size_t i = 0; i < txt.length(); i++) { char c = tolower(txt[i]);
+                if ((c>='a'&&c<='z')||(c>='0'&&c<='9')||c=='-') n += c; }
+            if (n.length() == 0) { UIManager::instance().showToast(t("chan_name_invalid")); return; }
+            n = "#" + n;
+            if ((int)cfg.channels.size() >= defaults::MAX_CHANNELS) { UIManager::instance().showToast(t("err_at_cap")); return; }
+            ChannelConfig cc; cc.name = n; cc.type = "hashtag";
+            commit(mgr.appendChannel(cc), "err_duplicate");
+            break;
+        }
+        case ConvoField::ChanPrivName:
+            if (txt.length() == 0) { UIManager::instance().showToast(t("chan_name_invalid")); return; }
+            self->_convPendName = txt;
+            self->setConvoField(ConvoField::ChanPrivPsk);
+            break;
+        case ConvoField::ChanPrivPsk: {
+            txt.toLowerCase();
+            if (!(isHexN(txt, 32) || isHexN(txt, 64))) { UIManager::instance().showToast(t("err_bad_psk")); return; }
+            if ((int)cfg.channels.size() >= defaults::MAX_CHANNELS) { UIManager::instance().showToast(t("err_at_cap")); return; }
+            ChannelConfig cc; cc.name = self->_convPendName; cc.type = "private"; cc.psk = txt;
+            commit(mgr.appendChannel(cc), "err_duplicate");
+            break;
+        }
+        case ConvoField::RoomName:
+            if (txt.length() == 0) { UIManager::instance().showToast(t("chan_name_invalid")); return; }
+            self->_convPendName = txt;
+            self->setConvoField(ConvoField::RoomKey);
+            break;
+        case ConvoField::RoomKey:
+            txt.toLowerCase();
+            if (!isHexN(txt, 64)) { UIManager::instance().showToast(t("err_bad_pubkey")); return; }
+            self->_convPendKey = txt;
+            self->setConvoField(ConvoField::RoomPass);
+            break;
+        case ConvoField::RoomPass: {
+            if ((int)cfg.roomServers.size() >= defaults::MAX_ROOM_SERVERS) { UIManager::instance().showToast(t("err_at_cap")); return; }
+            RoomServerConfig rc; rc.name = self->_convPendName; rc.publicKey = self->_convPendKey; rc.password = txt;
+            commit(mgr.appendRoom(rc), "err_duplicate");
+            break;
         }
     }
 }
@@ -760,6 +1198,7 @@ void SettingsScreen::hide() {
         if (_bootTextTextarea) hideBootTextEditor();
         if (_choicePanel) hideChoicePicker();
         if (_timezoneTextarea) hideTimezoneEditor();
+        if (_convoTextarea) hideConvoEditor();
         lv_group_t* grp = lv_group_get_default();
         if (grp) {
             lv_group_set_editing(grp, false);

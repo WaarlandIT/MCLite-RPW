@@ -8,6 +8,14 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 ## [Unreleased]
 
 ### Added
+- **On-device add/remove of contacts, channels, and rooms.** With the new `permissions.conversation_management`
+  flag enabled (config-tool provisioned, default off), the Admin → Conversations screens gain **Add** and
+  **Remove** for every type: contacts (from a heard advert, or by entering a 64-hex key), channels (Public
+  one-tap, hashtag by name, or private with a generated/entered PSK), and room servers (name + key + optional
+  password). Mirrors the config tool's rules (PSK derivation, Public's fixed key, caps of 32/16/8, duplicate
+  checks) so device-made entries round-trip cleanly. Changes save immediately and **apply after a reboot**
+  (you're prompted), and removing an entry also clears its chat history. When the flag is off, the lists stay
+  read-only as before.
 - **More radio region presets + a roller picker.** The region preset list grew to 19 entries (EU/UK/CH,
   US/Canada, several AU regions, Brazil, Czech Republic, EU 433, Netherlands, New Zealand, Portugal,
   Switzerland, Vietnam, …), sourced from the MeshCore config API and kept in sync between the config tool and

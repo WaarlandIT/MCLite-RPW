@@ -22,6 +22,13 @@ String MessageStore::historyPath(const ConvoId& id) const {
     return path;
 }
 
+void MessageStore::removeConversation(const ConvoId& id) {
+    for (auto it = _convos.begin(); it != _convos.end(); ++it) {
+        if (it->convoId == id) { _convos.erase(it); break; }
+    }
+    SDCard::instance().remove(historyPath(id).c_str());  // safe no-op if file missing
+}
+
 Conversation& MessageStore::getOrCreate(const ConvoId& id, const String& displayName,
                                          bool isPrivate, bool readOnly) {
     for (auto& c : _convos) {

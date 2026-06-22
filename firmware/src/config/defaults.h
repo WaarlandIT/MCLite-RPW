@@ -26,7 +26,7 @@ constexpr const char* FIRMWARE_VENDOR  = MCLITE_REPO_OWNER "/" MCLITE_REPO_NAME;
 // set the SAME number in each sdcard/mclite/lang/*.json "version". On boot I18n
 // warns (serial) if a loaded lang file's version is older — i.e. it predates the
 // current string set, so some keys will fall back to English.
-constexpr uint16_t LANG_VERSION = 39;
+constexpr uint16_t LANG_VERSION = 40;
 
 // Device
 constexpr const char* DEVICE_NAME = "MCLite";
@@ -44,6 +44,10 @@ constexpr uint16_t RADIO_ADVERT_INTERVAL_MIN = 0; // Periodic flood-advert inter
 // Contacts — must stay <= MAX_CONTACTS - MAX_ROOMS from platformio.ini (40 - 8 = 32).
 // Save-to-contacts refuses to append when this is reached.
 constexpr int      MAX_CHAT_CONTACTS     = 32;
+// Channels (MeshCore MAX_GROUP_CHANNELS=16) and room servers (MAX_ROOMS_RUNTIME=8,
+// part of the 40-contact MeshCore budget). On-device add refuses at these caps.
+constexpr int      MAX_CHANNELS          = 16;
+constexpr int      MAX_ROOM_SERVERS      = 8;
 
 // Display
 constexpr uint8_t  DISPLAY_BRIGHTNESS    = 180;
