@@ -64,7 +64,10 @@ void CompanionService::loop() {
     // Reset per-session state when a client drops, so stale queued frames and a
     // stale negotiated version never leak into the next connection.
     bool conn = _iface->isConnected();
-    if (!conn && _wasConnected) { _offlineLen = 0; _contactsIterating = false; _appVer = 0; }
+    if (!conn && _wasConnected) {
+        _offlineLen = 0; _contactsIterating = false; _appVer = 0;
+        for (auto& pl : _pendingLogin) pl.active = false;  // don't leak a login push to the next client
+    }
     _wasConnected = conn;
 
     size_t len = _iface->checkRecvFrame(_cmd);
