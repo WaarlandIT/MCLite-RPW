@@ -114,6 +114,7 @@ void CompanionService::handleFrame(size_t len) {
         case CMD_RESET_PATH:       cmdResetPath(len);       break;
         case CMD_EXPORT_CONTACT:   cmdExportContact(len);   break;
         case CMD_IMPORT_CONTACT:   cmdImportContact(len);   break;
+        case CMD_GET_AUTOADD_CONFIG: cmdGetAutoaddConfig(); break;
         case CMD_REBOOT:           cmdReboot();             break;
         case CMD_SYNC_NEXT_MESSAGE: cmdSyncNextMessage();   break;
         case CMD_LOGOUT:           writeOK();               break;   // no room sessions yet
@@ -984,6 +985,16 @@ void CompanionService::cmdImportContact(size_t len) {
     if (!mesh) { writeErr(ERR_CODE_BAD_STATE); return; }
     if (mesh->importContact(&_cmd[1], (uint8_t)(len - 1))) writeOK();
     else writeErr(ERR_CODE_ILLEGAL_ARG);
+}
+
+// CMD_GET_AUTOADD_CONFIG -> RESP_CODE_AUTOADD_CONFIG. MCLite never auto-adds heard nodes
+// (manual_add_contacts=1 / shouldAutoAddContactType=false), so always report off (config=0,
+// max_hops=0) — lets the app render "Auto Add Contacts" correctly instead of erroring.
+void CompanionService::cmdGetAutoaddConfig() {
+    _out[0] = RESP_CODE_AUTOADD_CONFIG;
+    _out[1] = 0;   // auto-add disabled
+    _out[2] = 0;   // max hops
+    _iface->writeFrame(_out, 3);
 }
 
 // CMD_SYNC_NEXT_MESSAGE -> next queued message, or NO_MORE_MESSAGES.

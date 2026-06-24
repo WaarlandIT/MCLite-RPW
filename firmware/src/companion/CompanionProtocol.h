@@ -93,6 +93,7 @@ enum : uint8_t {
     CMD_RESET_PATH             = 13,  // [1..32]=contact pubkey; reset its learned path (flood rediscover)
     CMD_EXPORT_CONTACT         = 17,  // [1..32]=pubkey (absent = self) -> RESP_CODE_EXPORT_CONTACT (advert blob)
     CMD_IMPORT_CONTACT         = 18,  // [1..]=advert blob; inject -> lands in Heard Adverts (curated)
+    CMD_GET_AUTOADD_CONFIG     = 59,  // -> RESP_CODE_AUTOADD_CONFIG (MCLite always reports auto-add off)
 };
 
 // ---- Responses (firmware -> app), out_frame[0] ----
@@ -115,6 +116,7 @@ enum : uint8_t {
     RESP_CODE_CHANNEL_INFO     = 18,  // reply to CMD_GET_CHANNEL
     RESP_CODE_DEFAULT_FLOOD_SCOPE = 28,  // reply to CMD_GET_DEFAULT_FLOOD_SCOPE: [1..31]=name [32..47]=key
     RESP_CODE_EXPORT_CONTACT   = 11,  // reply to CMD_EXPORT_CONTACT: [1..]=advert blob
+    RESP_CODE_AUTOADD_CONFIG   = 25,  // reply to CMD_GET_AUTOADD_CONFIG: [1]=config [2]=max_hops
 };
 
 // ---- Push codes (unsolicited firmware -> app), out_frame[0] ----

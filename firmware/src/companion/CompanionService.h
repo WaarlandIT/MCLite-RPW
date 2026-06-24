@@ -122,6 +122,7 @@ private:
     void cmdResetPath(size_t len);              // reset a contact's learned path (flood rediscover)
     void cmdExportContact(size_t len);          // export self/contact advert blob
     void cmdImportContact(size_t len);          // inject an advert blob -> Heard Adverts
+    void cmdGetAutoaddConfig();                 // always reports auto-add off (manual-add by design)
     void noteSent(uint32_t packetId);   // track a DM awaiting ACK confirmation
 
     // Stream one contact per loop tick while a GET_CONTACTS sync is in progress.
