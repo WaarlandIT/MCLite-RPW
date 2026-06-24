@@ -19,6 +19,9 @@
 //     messaging.request_telemetry flag.
 //   - CMD_SEND_LOGIN — logs into an already-configured room/repeater over the mesh
 //     (same as the on-device room login); session is RAM-only, no config write.
+//   - CMD_SHARE_CONTACT — re-broadcasts a known contact's advert at zero hop (same as the
+//     on-device Share button); transmits only, gated by messaging.share_contact.
+//   - CMD_REBOOT — reboots the device (a power-cycle; no stored-state change). No response.
 // One honored *write* (mutates stored config + reboots to apply, mirroring on-device
 // add/remove), gated by permissions.conversation_management — add/remove only, no edit:
 //   - CMD_SET_CHANNEL — add a channel (or remove it, via an empty name).
@@ -44,6 +47,8 @@ enum : uint8_t {
     CMD_GET_CONTACT_BY_KEY     = 30,
     CMD_GET_CHANNEL            = 31,
     CMD_SET_CHANNEL            = 0x20,  // [1]=idx(0-7) [2..33]=name(32) [34..49]=16-byte secret; empty name = remove
+    CMD_SHARE_CONTACT          = 16,  // [1..32]=32-byte contact pubkey; re-broadcast its advert (zero hop)
+    CMD_REBOOT                 = 19,  // [1..]="reboot"; reboot the device (no response)
     CMD_SEND_LOGIN             = 26,  // [1..32]=32-byte room/repeater pubkey [33..]=password (<=15)
     CMD_SEND_TELEMETRY_REQ     = 39,  // [1..3]=reserved [4..35]=32-byte contact pubkey
 };

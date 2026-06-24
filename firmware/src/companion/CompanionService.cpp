@@ -99,6 +99,8 @@ void CompanionService::handleFrame(size_t len) {
         case CMD_GET_CONTACT_BY_KEY: cmdGetContactByKey(len); break;
         case CMD_GET_CHANNEL:      cmdGetChannel(len);      break;
         case CMD_SET_CHANNEL:      cmdSetChannel(len);      break;
+        case CMD_SHARE_CONTACT:    cmdShareContact(len);    break;
+        case CMD_REBOOT:           cmdReboot();             break;
         case CMD_SYNC_NEXT_MESSAGE: cmdSyncNextMessage();   break;
         case CMD_LOGOUT:           writeOK();               break;   // no room sessions yet
         case CMD_HAS_CONNECTION:   writeErr(ERR_CODE_NOT_FOUND); break;
@@ -622,6 +624,25 @@ void CompanionService::cmdSetChannel(size_t len) {
 
     _rebootAtMs = millis() + REBOOT_DELAY_MS;
     writeOK();
+}
+
+// CMD_SHARE_CONTACT -> RESP_CODE_OK/ERR. Re-broadcast a known contact's advert at zero hop
+// (same as the on-device Share button). [1..32]=32-byte contact pubkey. Pure action, no
+// config change; gated by the same messaging.share_contact flag.
+void CompanionService::cmdShareContact(size_t len) {
+    if (len < 33) { writeErr(ERR_CODE_ILLEGAL_ARG); return; }
+    if (!ConfigManager::instance().config().messaging.shareContact) { writeErr(ERR_CODE_BAD_STATE); return; }
+    const uint8_t* pubKey = &_cmd[1];
+    auto* mesh = MeshManager::instance().mesh();
+    if (!mesh || !mesh->lookupContactByPubKey(pubKey, PUB_KEY_SIZE)) { writeErr(ERR_CODE_NOT_FOUND); return; }
+    if (MeshManager::instance().shareContact(pubKey)) writeOK();
+    else writeErr(ERR_CODE_BAD_STATE);   // no re-broadcastable advert held for this contact
+}
+
+// CMD_REBOOT -> (no response, per protocol). Reboot the device: a power-cycle, no stored-state
+// change, so it's allowed ungated. Reuses the deferred-reboot path (loop() performs the restart).
+void CompanionService::cmdReboot() {
+    _rebootAtMs = millis() + REBOOT_DELAY_MS;
 }
 
 // CMD_SYNC_NEXT_MESSAGE -> next queued message, or NO_MORE_MESSAGES.
