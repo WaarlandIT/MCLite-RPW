@@ -736,6 +736,7 @@ void SettingsScreen::buildConvoList() {
                 String info = ch.name;
                 if (ch.readOnly) info += " [read-only]";
                 if (ch.sendSos) info += " [SOS]";
+                if (ch.scope.length() > 0) info += " [scope:" + ch.scope + "]";
                 lv_obj_t* row = addNavRow(prefix, info, convoRowCb);
                 lv_obj_set_user_data(row, (void*)(intptr_t)i);
             }
@@ -764,6 +765,7 @@ void SettingsScreen::buildConvoList() {
         for (size_t i = 0; i < rooms.size(); i++) {
             String info = rooms[i].name;
             info += UIManager::instance().isRoomLoggedIn(i) ? " [online]" : " [offline]";
+            if (rooms[i].scope.length() > 0) info += " [scope:" + rooms[i].scope + "]";
             if (!manage && rooms[i].publicKey.length() == 64) {
                 String shortId = rooms[i].publicKey.substring(0, 16);
                 ConvoId rid { ConvoId::ROOM, shortId };
@@ -855,14 +857,12 @@ void SettingsScreen::openButtonModal(ConvoModal purpose) {
             else if (_section == SettingsSection::Channels && i < cfg.channels.size())  name = cfg.channels[i].name;
             else if (_section == SettingsSection::Rooms && i < cfg.roomServers.size())  name = cfg.roomServers[i].name;
             title = name;
-            // Row actions: an extra per-section action beside Delete (Reset Path for contacts,
-            // Set Scope for channels), then Delete, then Cancel.
+            // Row actions: an extra per-section action at idx 0 (Reset Path for contacts; Set
+            // Scope for channels and rooms), then Delete (idx 1), then Cancel.
             if (_section == SettingsSection::Contacts)
                 g_btnModalLabels = { t("convo_reset_path"), t("btn_delete"), t("btn_cancel") };
-            else if (_section == SettingsSection::Channels)
-                g_btnModalLabels = { t("convo_set_scope"), t("btn_delete"), t("btn_cancel") };
             else
-                g_btnModalLabels = { t("btn_delete"), t("btn_cancel") };
+                g_btnModalLabels = { t("convo_set_scope"), t("btn_delete"), t("btn_cancel") };
             break;
         }
         case ConvoModal::RebootConfirm:
@@ -932,8 +932,10 @@ void SettingsScreen::onConvoModalChoice(lv_obj_t* dlg, int idxIn) {
         auto& c = ConfigManager::instance().config();
         const bool isContact = self->_section == SettingsSection::Contacts;
         const bool isChannel = self->_section == SettingsSection::Channels;
+        const bool isRoom    = self->_section == SettingsSection::Rooms;
 
-        // idx 0 is the per-section action (contacts/channels only); then Delete, then Cancel.
+        // idx 0 is the per-section action (Reset Path for contacts; Set Scope for channels/rooms),
+        // then Delete, then Cancel — so Delete is always idx 1.
         if (isContact && idx == 0) {                    // Reset Path
             if (i < c.contacts.size()) {
                 String b64 = c.contacts[i].publicKey;
@@ -947,13 +949,14 @@ void SettingsScreen::onConvoModalChoice(lv_obj_t* dlg, int idxIn) {
             lv_async_call([](void* p){ ((SettingsScreen*)p)->show(); }, self);
             return;
         }
-        if (isChannel && idx == 0) {                    // Set Scope (per-channel editor)
-            self->_scopeChannelIdx = (int)i;
+        if ((isChannel || isRoom) && idx == 0) {        // Set Scope (per-channel/room editor)
+            self->_scopeTarget = isChannel ? ScopeTarget::Channel : ScopeTarget::Room;
+            self->_scopeTargetIdx = (int)i;
             lv_async_call([](void* p){ ((SettingsScreen*)p)->openScopeEditor(); }, self);
             return;
         }
 
-        size_t deleteIdx = (isContact || isChannel) ? 1 : 0;
+        const size_t deleteIdx = 1;   // all sections now have an action at idx 0
         if (idx != deleteIdx) { lv_async_call([](void* p){ ((SettingsScreen*)p)->show(); }, self); return; }  // Cancel
         bool ok = false;
         if (self->_section == SettingsSection::Contacts && i < c.contacts.size()) {
@@ -2430,20 +2433,19 @@ void SettingsScreen::scopeReadyCb(lv_event_t* e) {
     if (!self || !self->_scopeTextarea) return;
     String s = convoTrim(String(lv_textarea_get_text(self->_scopeTextarea)));
     auto& cfg = ConfigManager::instance().config();
-    int ch = self->_scopeChannelIdx;
-    if (ch < 0) {
-        // Global radio scope: blank == "*" == no scope.
-        if (s.length() == 0) s = "*";
-        if (cfg.radio.scope != s) {
-            cfg.radio.scope = s; g_dsDirty = true; g_dsReboot = true;
-            UIManager::instance().showToast(t("theme_apply_body"));
-        }
-    } else if ((size_t)ch < cfg.channels.size()) {
-        // Per-channel scope: blank == "" == inherit the global scope (not "*").
-        if (cfg.channels[ch].scope != s) {
-            cfg.channels[ch].scope = s; g_dsDirty = true; g_dsReboot = true;
-            UIManager::instance().showToast(t("theme_apply_body"));
-        }
+    int idx = self->_scopeTargetIdx;
+    String* target = nullptr;
+    if (self->_scopeTarget == ScopeTarget::Global) {
+        if (s.length() == 0) s = "*";              // global blank == "*" == no scope
+        target = &cfg.radio.scope;
+    } else if (self->_scopeTarget == ScopeTarget::Channel && (size_t)idx < cfg.channels.size()) {
+        target = &cfg.channels[idx].scope;          // per-channel: blank == "" == inherit global
+    } else if (self->_scopeTarget == ScopeTarget::Room && (size_t)idx < cfg.roomServers.size()) {
+        target = &cfg.roomServers[idx].scope;       // per-room: blank == "" == inherit global
+    }
+    if (target && *target != s) {
+        *target = s; g_dsDirty = true; g_dsReboot = true;
+        UIManager::instance().showToast(t("theme_apply_body"));
     }
     lv_async_call([](void* p) { ((SettingsScreen*)p)->hideScopeEditor(); }, self);
 }
@@ -2452,17 +2454,21 @@ void SettingsScreen::scopeReadyCb(lv_event_t* e) {
 void SettingsScreen::scopeRowCb(lv_event_t* e) {
     SettingsScreen* self = (SettingsScreen*)lv_event_get_user_data(e);
     if (!self) return;
-    self->_scopeChannelIdx = -1;
+    self->_scopeTarget = ScopeTarget::Global;
     self->openScopeEditor();
 }
 
-// Builds the scope editor for the current _scopeChannelIdx (-1 = global radio scope; else channel).
+// Builds the scope editor for the current _scopeTarget / _scopeTargetIdx.
 void SettingsScreen::openScopeEditor() {
     if (_scopeTextarea) return;
     const auto& cfg = ConfigManager::instance().config();
-    String preFill = (_scopeChannelIdx < 0)
-        ? cfg.radio.scope
-        : ((size_t)_scopeChannelIdx < cfg.channels.size() ? cfg.channels[_scopeChannelIdx].scope : String());
+    String preFill;
+    if (_scopeTarget == ScopeTarget::Channel && (size_t)_scopeTargetIdx < cfg.channels.size())
+        preFill = cfg.channels[_scopeTargetIdx].scope;
+    else if (_scopeTarget == ScopeTarget::Room && (size_t)_scopeTargetIdx < cfg.roomServers.size())
+        preFill = cfg.roomServers[_scopeTargetIdx].scope;
+    else
+        preFill = cfg.radio.scope;
 
     _scopeOverlay = lv_obj_create(lv_layer_top());
     lv_obj_set_size(_scopeOverlay, Display::width(), Display::height());

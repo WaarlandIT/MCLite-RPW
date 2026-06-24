@@ -68,11 +68,13 @@ private:
     static void nameRowCb(lv_event_t* e);
     static void nameReadyCb(lv_event_t* e);
 
-    // Region/scope editor overlay (mirrors the device-name editor). Target: -1 = global
-    // radio.scope; >=0 = that channel's per-channel scope.
+    // Region/scope editor overlay (mirrors the device-name editor). Target = which scope:
+    // global radio.scope, a channel's, or a room's (the override lives in that entry's config).
+    enum class ScopeTarget { Global, Channel, Room };
     lv_obj_t* _scopeOverlay  = nullptr;
     lv_obj_t* _scopeTextarea = nullptr;
-    int        _scopeChannelIdx = -1;
+    ScopeTarget _scopeTarget = ScopeTarget::Global;
+    int        _scopeTargetIdx = -1;   // channel/room index when target != Global
 #ifdef PLATFORM_TWATCH
     lv_obj_t* _scopeKbd      = nullptr;
 #endif
