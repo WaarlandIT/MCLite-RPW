@@ -103,6 +103,8 @@ private:
     void cmdSendTelemetryReq(size_t len);   // request telemetry from a contact (over the mesh)
     void cmdSendLogin(size_t len);          // log into an already-configured room/repeater
     void cmdSetChannel(size_t len);         // add a channel (or remove via empty name); reboots to apply
+    void cmdAddUpdateContact(size_t len);   // add a contact, or edit an existing one's name (live, no reboot)
+    void cmdRemoveContact(size_t len);      // remove a contact + its history/advert (live, no reboot)
     void cmdShareContact(size_t len);       // re-broadcast a contact's advert (zero hop)
     void cmdReboot();                       // reboot the device (no response)
     void noteSent(uint32_t packetId);   // track a DM awaiting ACK confirmation

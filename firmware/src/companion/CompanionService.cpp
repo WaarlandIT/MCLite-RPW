@@ -4,6 +4,7 @@
 
 #include "../config/ConfigManager.h"
 #include "../config/defaults.h"
+#include "util/hex.h"            // pubKeyToShortId
 #include "../mesh/MeshManager.h"
 #include "../mesh/MCLiteMesh.h"   // mesh() reads: contacts, channels, RTC
 #include "../mesh/ContactStore.h"
@@ -99,6 +100,8 @@ void CompanionService::handleFrame(size_t len) {
         case CMD_GET_CONTACT_BY_KEY: cmdGetContactByKey(len); break;
         case CMD_GET_CHANNEL:      cmdGetChannel(len);      break;
         case CMD_SET_CHANNEL:      cmdSetChannel(len);      break;
+        case CMD_ADD_UPDATE_CONTACT: cmdAddUpdateContact(len); break;
+        case CMD_REMOVE_CONTACT:   cmdRemoveContact(len);   break;
         case CMD_SHARE_CONTACT:    cmdShareContact(len);    break;
         case CMD_REBOOT:           cmdReboot();             break;
         case CMD_SYNC_NEXT_MESSAGE: cmdSyncNextMessage();   break;
@@ -623,6 +626,92 @@ void CompanionService::cmdSetChannel(size_t len) {
     if (nc && mesh) mesh->addChannel(nc->name.c_str(), nc->pskB64.c_str());
 
     _rebootAtMs = millis() + REBOOT_DELAY_MS;
+    writeOK();
+}
+
+// CMD_ADD_UPDATE_CONTACT -> RESP_CODE_OK/ERR. Add a new contact, or edit an existing one's
+// display name. Applied LIVE (no reboot): MeshCore add/removeContact are runtime ops and
+// GET_CONTACTS renders the configured alias, so the app's list updates immediately and the
+// companion session stays connected. Only the name is persisted on edit — MCLite's per-contact
+// permission flags are device-owner policy (not in the app's contact-settings model) and the
+// app's flags byte is app-local. Frame: [1..32]=pubkey [33]=type [34]=flags [35]=out_path_len
+// [36..99]=out_path(64) [100..131]=adv_name(32) [132..135]=last_advert [136..143]=lat/lon(opt).
+void CompanionService::cmdAddUpdateContact(size_t len) {
+    if (len < 136) { writeErr(ERR_CODE_ILLEGAL_ARG); return; }   // through last_advert; lat/lon optional
+    auto& mgr = ConfigManager::instance();
+    if (!mgr.config().permissions.conversationManagement) { writeErr(ERR_CODE_BAD_STATE); return; }
+    auto* mesh = MeshManager::instance().mesh();
+    if (!mesh) { writeErr(ERR_CODE_BAD_STATE); return; }
+
+    const uint8_t* pubKey = &_cmd[1];
+    char nameBuf[33];
+    memcpy(nameBuf, &_cmd[100], 32);
+    nameBuf[32] = '\0';
+    String advName(nameBuf);
+
+    int idx = mgr.findContactIndexByKey(pubKey);
+    if (idx >= 0) {
+        // EDIT: persist the (possibly) new display name; skip a no-op change to avoid churn.
+        // The alias the app shows came from our own GET_CONTACTS, so this is the user's intent,
+        // not a raw advert-name overwrite (the alias-display fix stays intact).
+        if (advName.length() && advName != mgr.config().contacts[idx].alias) {
+            if (!mgr.updateContactAlias((size_t)idx, advName)) { writeErr(ERR_CODE_FILE_IO_ERROR); return; }
+            ContactStore::instance().loadFromConfig();   // GET_CONTACTS picks up the new alias
+        }
+        writeOK();
+        return;
+    }
+
+    // ADD: persist a discovered-style contact with conservative (all-false) permissions, then
+    // register it live so GET_CONTACTS (which iterates mesh contacts[]) shows it without a reboot.
+    ContactConfig cc;
+    cc.alias = advName.length() ? advName : String("Contact");
+    char hex[2 * PUB_KEY_SIZE + 1];
+    for (int b = 0; b < PUB_KEY_SIZE; b++) sprintf(hex + 2 * b, "%02x", pubKey[b]);
+    cc.publicKey = hex;
+    cc.allowTelemetry = cc.allowLocation = cc.allowEnvironment = false;
+    cc.alwaysSound = cc.allowSos = cc.sendSos = false;
+    cc.fromDiscovery = true;
+    if (!mgr.appendDiscoveredContact(cc)) {
+        writeErr((int)mgr.config().contacts.size() >= defaults::MAX_CHAT_CONTACTS
+                     ? ERR_CODE_TABLE_FULL : ERR_CODE_BAD_STATE);
+        return;
+    }
+
+    ContactInfo ci;
+    memset(&ci, 0, sizeof(ci));
+    memcpy(ci.id.pub_key, pubKey, PUB_KEY_SIZE);
+    strncpy(ci.name, cc.alias.c_str(), sizeof(ci.name) - 1);
+    ci.type         = _cmd[33];
+    ci.flags        = _cmd[34];
+    ci.out_path_len = _cmd[35];                       // 0xFF = OUT_PATH_UNKNOWN
+    memcpy(ci.out_path, &_cmd[36], MAX_PATH_SIZE);
+    memcpy(&ci.last_advert_timestamp, &_cmd[132], 4);
+    if (len >= 144) { memcpy(&ci.gps_lat, &_cmd[136], 4); memcpy(&ci.gps_lon, &_cmd[140], 4); }
+    mesh->addContact(ci);
+    ContactStore::instance().loadFromConfig();
+    writeOK();
+}
+
+// CMD_REMOVE_CONTACT -> RESP_CODE_OK/ERR. Drop a contact, its chat history, and any held
+// advert. Live (no reboot), mirroring the on-device SettingsScreen remove. [1..32]=pubkey.
+void CompanionService::cmdRemoveContact(size_t len) {
+    if (len < 33) { writeErr(ERR_CODE_ILLEGAL_ARG); return; }
+    auto& mgr = ConfigManager::instance();
+    if (!mgr.config().permissions.conversationManagement) { writeErr(ERR_CODE_BAD_STATE); return; }
+    auto* mesh = MeshManager::instance().mesh();
+    if (!mesh) { writeErr(ERR_CODE_BAD_STATE); return; }
+
+    const uint8_t* pubKey = &_cmd[1];
+    int idx = mgr.findContactIndexByKey(pubKey);
+    if (idx < 0) { writeErr(ERR_CODE_NOT_FOUND); return; }
+
+    String shortId = pubKeyToShortId(pubKey);
+    if (!mgr.removeContactAt((size_t)idx)) { writeErr(ERR_CODE_FILE_IO_ERROR); return; }
+    if (ContactInfo* ci = mesh->lookupContactByPubKey(pubKey, PUB_KEY_SIZE)) mesh->removeContact(*ci);
+    MessageStore::instance().removeConversation(ConvoId{ConvoId::DM, shortId});
+    MeshManager::instance().deleteAdvertBlob(pubKey);
+    ContactStore::instance().loadFromConfig();
     writeOK();
 }
 

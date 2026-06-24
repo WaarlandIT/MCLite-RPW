@@ -22,9 +22,17 @@
 //   - CMD_SHARE_CONTACT — re-broadcasts a known contact's advert at zero hop (same as the
 //     on-device Share button); transmits only, gated by messaging.share_contact.
 //   - CMD_REBOOT — reboots the device (a power-cycle; no stored-state change). No response.
-// One honored *write* (mutates stored config + reboots to apply, mirroring on-device
-// add/remove), gated by permissions.conversation_management — add/remove only, no edit:
-//   - CMD_SET_CHANNEL — add a channel (or remove it, via an empty name).
+// Honored conversation-management *writes* (mutate stored config), gated by
+// permissions.conversation_management, mirroring on-device add/remove:
+//   - CMD_SET_CHANNEL — add a channel (or remove it, via an empty name). Reboots to apply
+//     (channels derive/register at boot); the new channel is also registered live so the
+//     app's immediate GET_CHANNEL returns the real key.
+//   - CMD_ADD_UPDATE_CONTACT — add a new contact, or edit an existing one's display name.
+//   - CMD_REMOVE_CONTACT — remove a contact (plus its chat history and any held advert).
+//     Contacts apply LIVE with no reboot (MeshCore add/removeContact are runtime ops and
+//     GET_CONTACTS renders the configured alias), so the session stays connected. Editing
+//     maps to the display name only: per-contact permission flags are device-owner policy
+//     (not in the app's contact-settings model) and the app's flags byte is app-local.
 
 #include <helpers/BaseSerialInterface.h>   // MAX_FRAME_SIZE (172)
 
@@ -47,6 +55,8 @@ enum : uint8_t {
     CMD_GET_CONTACT_BY_KEY     = 30,
     CMD_GET_CHANNEL            = 31,
     CMD_SET_CHANNEL            = 0x20,  // [1]=idx(0-7) [2..33]=name(32) [34..49]=16-byte secret; empty name = remove
+    CMD_ADD_UPDATE_CONTACT     = 9,   // [1..32]=pubkey [33]=type [34]=flags [35]=out_path_len [36..99]=out_path(64) [100..131]=adv_name(32) [132..135]=last_advert [136..143]=lat/lon(opt)
+    CMD_REMOVE_CONTACT         = 15,  // [1..32]=32-byte contact pubkey
     CMD_SHARE_CONTACT          = 16,  // [1..32]=32-byte contact pubkey; re-broadcast its advert (zero hop)
     CMD_REBOOT                 = 19,  // [1..]="reboot"; reboot the device (no response)
     CMD_SEND_LOGIN             = 26,  // [1..32]=32-byte room/repeater pubkey [33..]=password (<=15)

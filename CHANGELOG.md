@@ -17,11 +17,16 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
     from the app. The change saves and applies after a quick reboot (the app reconnects on its own), and the new
     channel is also registered live so the app's immediate share QR shows the real key, not zeros. Gated by the
     `permissions.conversation_management` setting, so a locked-down device still refuses it (#31).
+  - **Add / edit / remove contacts** (`CMD_ADD_UPDATE_CONTACT`, `CMD_REMOVE_CONTACT`): add a contact, rename one,
+    or delete one (and its chat history) straight from the app. These apply **live with no reboot** — the contact
+    list updates immediately and the app stays connected. Editing maps to the contact's **display name**;
+    per-contact permission flags stay device-owner settings (the config tool / on-device Admin), and the app's own
+    contact flags remain app-local. Also gated by `permissions.conversation_management` (#33).
   - **Share a contact** (`CMD_SHARE_CONTACT`) re-broadcasts a contact's advert so a nearby device can add them,
     and **reboot** (`CMD_REBOOT`) is now honoured from the app's button.
   - The app's **Local vs Flood** advert buttons were already handled; confirmed during this work.
-  Companion add/remove of **contacts** (#33) and in-place editing of contacts/channels/rooms are still to come
-  (editing arrives with on-device editing).
+  With this, the companion can fully manage rooms, channels, and contacts (#31, #32, #33 all closed). In-place
+  editing of a contact's permission flags / a channel's settings still arrives alongside on-device editing.
 
 ## [0.4.0] — 2026-06-22
 

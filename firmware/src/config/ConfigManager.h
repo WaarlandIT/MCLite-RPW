@@ -189,6 +189,17 @@ public:
     bool removeRoomAt(size_t i);
     bool hasPublicChannel() const;
 
+    // Resolve a 32-byte raw public key to its index in _config.contacts, decoding each
+    // stored key (hex-64 OR base64) so it matches regardless of storage format. Returns
+    // -1 if not found. Unlike hasContactByPubkeyHex (a single-format string compare), this
+    // is format-agnostic — required by the companion add/edit/remove path, where the app
+    // sends raw key bytes and contacts may be stored either way.
+    int findContactIndexByKey(const uint8_t* key32) const;
+
+    // Update an existing contact's display alias (companion contact edit). Saves
+    // immediately and rolls back on SD failure. Returns false on bad index or save fail.
+    bool updateContactAlias(size_t i, const String& alias);
+
     AppConfig& config() { return _config; }
     const AppConfig& config() const { return _config; }
 

@@ -4,6 +4,9 @@
 #include "defaults.h"
 #include <Arduino.h>
 #include <mbedtls/sha256.h>
+#include <mbedtls/base64.h>
+#include "util/hex.h"   // isHexString — shared with ContactStore's key decode
+#include <cstring>
 
 namespace mclite {
 
@@ -710,6 +713,40 @@ bool ConfigManager::removeContactAt(size_t i) {
     _config.contacts.erase(_config.contacts.begin() + i);
     if (!save()) {
         _config.contacts.insert(_config.contacts.begin() + i, saved);  // rollback
+        return false;
+    }
+    return true;
+}
+
+int ConfigManager::findContactIndexByKey(const uint8_t* key32) const {
+    for (size_t i = 0; i < _config.contacts.size(); i++) {
+        const String& pk = _config.contacts[i].publicKey;
+        uint8_t buf[32];
+        bool ok = false;
+        // Same hex-64-or-base64 decode ContactStore::loadFromConfig uses.
+        if (pk.length() == 64 && isHexString(pk)) {
+            for (int b = 0; b < 32; b++) {
+                char byte[3] = { pk[b * 2], pk[b * 2 + 1], 0 };
+                buf[b] = (uint8_t)strtoul(byte, nullptr, 16);
+            }
+            ok = true;
+        } else {
+            size_t outLen = 0;
+            ok = (mbedtls_base64_decode(buf, sizeof(buf), &outLen,
+                                        (const uint8_t*)pk.c_str(), pk.length()) == 0 &&
+                  outLen == 32);
+        }
+        if (ok && memcmp(buf, key32, 32) == 0) return (int)i;
+    }
+    return -1;
+}
+
+bool ConfigManager::updateContactAlias(size_t i, const String& alias) {
+    if (i >= _config.contacts.size()) return false;
+    String saved = _config.contacts[i].alias;
+    _config.contacts[i].alias = alias;
+    if (!save()) {
+        _config.contacts[i].alias = saved;  // rollback
         return false;
     }
     return true;

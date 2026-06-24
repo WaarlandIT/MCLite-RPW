@@ -864,6 +864,63 @@ void test_append_discovered_contact_refuses_at_cap() {
     TEST_ASSERT_EQUAL_INT(defaults::MAX_CHAT_CONTACTS, (int)cfg->config().contacts.size());
 }
 
+// ═══ companion contact resolution + alias edit (#33) ═══
+
+static void makeKey(uint8_t* k, uint8_t offset) {
+    for (int i = 0; i < 32; i++) k[i] = (uint8_t)(i + offset);
+}
+static String keyToHex(const uint8_t* k) {
+    char h[65];
+    for (int i = 0; i < 32; i++) sprintf(h + i * 2, "%02x", k[i]);
+    h[64] = '\0';
+    return String(h);
+}
+static String keyToB64(const uint8_t* k) {
+    unsigned char out[64]; size_t olen = 0;
+    mbedtls_base64_encode(out, sizeof(out), &olen, k, 32);
+    return String((const char*)out);
+}
+
+void test_find_contact_index_by_key_hex() {
+    uint8_t k0[32], k1[32]; makeKey(k0, 0); makeKey(k1, 100);
+    ContactConfig a; a.alias = "a"; a.publicKey = keyToHex(k0);
+    ContactConfig b; b.alias = "b"; b.publicKey = keyToHex(k1);
+    cfg->config().contacts.push_back(a);
+    cfg->config().contacts.push_back(b);
+    TEST_ASSERT_EQUAL_INT(0, cfg->findContactIndexByKey(k0));
+    TEST_ASSERT_EQUAL_INT(1, cfg->findContactIndexByKey(k1));
+}
+
+void test_find_contact_index_by_key_base64() {
+    // Key stored as base64 (config-tool format) must still resolve from raw bytes.
+    uint8_t k0[32], k1[32]; makeKey(k0, 0); makeKey(k1, 100);
+    ContactConfig a; a.alias = "a"; a.publicKey = keyToB64(k0);
+    cfg->config().contacts.push_back(a);
+    TEST_ASSERT_EQUAL_INT(0, cfg->findContactIndexByKey(k0));
+    TEST_ASSERT_EQUAL_INT(-1, cfg->findContactIndexByKey(k1));   // unknown -> -1
+}
+
+void test_find_contact_index_mixed_formats() {
+    // One contact stored hex, another base64 — both resolve (the audit-found bug).
+    uint8_t k0[32], k1[32]; makeKey(k0, 0); makeKey(k1, 100);
+    ContactConfig a; a.alias = "hex"; a.publicKey = keyToHex(k0);
+    ContactConfig b; b.alias = "b64"; b.publicKey = keyToB64(k1);
+    cfg->config().contacts.push_back(a);
+    cfg->config().contacts.push_back(b);
+    TEST_ASSERT_EQUAL_INT(0, cfg->findContactIndexByKey(k0));
+    TEST_ASSERT_EQUAL_INT(1, cfg->findContactIndexByKey(k1));
+}
+
+void test_update_contact_alias() {
+    uint8_t k[32]; makeKey(k, 5);
+    ContactConfig a; a.alias = "old"; a.publicKey = keyToHex(k);
+    cfg->config().contacts.push_back(a);
+    TEST_ASSERT_TRUE(cfg->updateContactAlias(0, "renamed"));
+    TEST_ASSERT_EQUAL_STRING("renamed", cfg->config().contacts[0].alias.c_str());
+    TEST_ASSERT_TRUE(g_last_atomic_content.find("renamed") != std::string::npos);  // persisted
+    TEST_ASSERT_FALSE(cfg->updateContactAlias(5, "x"));   // bad index
+}
+
 // ═══ channel / room add + remove ═══
 
 void test_append_channel_hashtag_assigns_index() {
@@ -1110,6 +1167,10 @@ int main() {
     RUN_TEST(test_append_discovered_contact_succeeds);
     RUN_TEST(test_append_discovered_contact_refuses_duplicate);
     RUN_TEST(test_append_discovered_contact_refuses_at_cap);
+    RUN_TEST(test_find_contact_index_by_key_hex);
+    RUN_TEST(test_find_contact_index_by_key_base64);
+    RUN_TEST(test_find_contact_index_mixed_formats);
+    RUN_TEST(test_update_contact_alias);
 
     // channel/room add + remove
     RUN_TEST(test_append_channel_hashtag_assigns_index);
