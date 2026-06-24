@@ -5,6 +5,24 @@ All notable changes to MCLite are documented here. The format is loosely based o
 
 Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-watch-vX.Y.Z.bin`).
 
+## [Unreleased]
+
+### Added
+- **Manage rooms and channels from the companion app.** The companion protocol gained the standard write/action
+  commands the official MeshCore app uses, so things that previously failed against MCLite now work:
+  - **Room login** (`CMD_SEND_LOGIN`): log into a configured room or repeater from the app. A blank password field
+    uses the password already in the device config, and a wrong password instantly retries with the stored one.
+    Thanks to the reporters (#32).
+  - **Add / remove channels** (`CMD_SET_CHANNEL`): join a Public, hashtag, or private channel — or remove one —
+    from the app. The change saves and applies after a quick reboot (the app reconnects on its own), and the new
+    channel is also registered live so the app's immediate share QR shows the real key, not zeros. Gated by the
+    `permissions.conversation_management` setting, so a locked-down device still refuses it (#31).
+  - **Share a contact** (`CMD_SHARE_CONTACT`) re-broadcasts a contact's advert so a nearby device can add them,
+    and **reboot** (`CMD_REBOOT`) is now honoured from the app's button.
+  - The app's **Local vs Flood** advert buttons were already handled; confirmed during this work.
+  Companion add/remove of **contacts** (#33) and in-place editing of contacts/channels/rooms are still to come
+  (editing arrives with on-device editing).
+
 ## [0.4.0] — 2026-06-22
 
 ### Added
