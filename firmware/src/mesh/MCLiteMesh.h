@@ -304,6 +304,7 @@ private:
     TelemRetry      _telemRetry;
     uint32_t        _pendingAnonTag = 0;
     uint8_t         _pendingAnonKey[PUB_KEY_SIZE] = {};
+    uint32_t        _pendingAnonExpiry = 0;   // millis() deadline; clears the slot if no reply arrives
 
     // Cached BaseChatMesh contact-index per registered room (avoids linear scan
     // on every login/post). Set during begin(); -1 means slot unused.

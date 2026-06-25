@@ -312,6 +312,13 @@ void MCLiteMesh::loop() {
 
     // Check for timed-out telemetry requests (retry via flood once)
     checkTelemTimeout();
+
+    // Free the single anon-request slot if its reply never arrived.
+    if (_pendingAnonTag != 0 && (int32_t)(millis() - _pendingAnonExpiry) >= 0) {
+        LOGLN("[MCLiteMesh] Anon req timed out — clearing pending slot");
+        _pendingAnonTag = 0;
+        memset(_pendingAnonKey, 0, PUB_KEY_SIZE);
+    }
 }
 
 bool MCLiteMesh::advertise(const char* name, bool flood) {
@@ -961,6 +968,10 @@ bool MCLiteMesh::sendAnonReqByKey(const uint8_t* pubKey, const uint8_t* data, ui
     }
     _pendingAnonTag = tag;
     memcpy(_pendingAnonKey, ci->id.pub_key, PUB_KEY_SIZE);
+    // Free the single slot if no reply arrives (estimate + slack), so a dropped
+    // reply doesn't wedge the feature until reboot. A late reply past this just
+    // finds no pending request and is ignored (the app has its own timeout).
+    _pendingAnonExpiry = millis() + estTimeout + 5000;
     LOGF("[MCLiteMesh] Anon req sent (tag=%u, timeout=%ums)\n", tag, estTimeout);
     return true;
 }
