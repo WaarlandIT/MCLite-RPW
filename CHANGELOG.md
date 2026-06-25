@@ -5,7 +5,7 @@ All notable changes to MCLite are documented here. The format is loosely based o
 
 Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-watch-vX.Y.Z.bin`).
 
-## [Unreleased]
+## [0.4.1] — 2026-06-25
 
 ### Added
 - **Manage rooms and channels from the companion app.** The companion protocol gained the standard write/action
@@ -73,6 +73,10 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
   the app. The temporary node is never saved to the contact list. Gated by `permissions.settings == "full"`.
   With this, MCLite now advertises companion firmware-version **13** so apps surface both this and the
   un-scoped-scope option above.
+- **Node status and path-trace from the app.** Two more standard companion commands: **status request**
+  (`CMD_SEND_STATUS_REQ` — ask a repeater/node for its status, e.g. uptime and counters) and **trace path**
+  (`CMD_SEND_TRACE_PATH` — trace the route to a node and report per-hop signal). This completes the companion
+  command set MCLite supports.
 
 ### Changed
 - **Updated the MeshCore library 1.15 → 1.16.** Brings RadioLib 7.6, an SF-dependent preamble (32 symbols for
@@ -81,6 +85,13 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
   interoperable with 1.16 nodes — including message ACKs — at SF8.
 
 ### Fixed
+- **Companion message sync no longer drops messages on connect.** Two issues fixed: the on-connect history
+  replay was capped (about two dozen messages) and walked oldest-first, so an active chat could lose its **newest**
+  messages and other chats could sync nothing; and over WiFi a full transport send-queue could silently drop a
+  message frame. Sync now streams the full stored history with no cap (newest included, all chats) and only
+  removes a message once the transport confirms it was sent — so reconnecting shows everything you received.
+  Works the same over WiFi and Bluetooth. (Note: messages you type **on the device** still don't appear in the
+  app — the MeshCore companion protocol has no outgoing-message frame; see the README.)
 - **Region scope without a leading `#` now matches MeshCore.** A region/flood-scope written as a bare name (e.g.
   `region` instead of `#region`) was hashed literally, producing a different transport key than the rest of the
   network. MCLite now prepends `#` to a bare name before deriving the key — mirroring MeshCore's implicit-hashtag
