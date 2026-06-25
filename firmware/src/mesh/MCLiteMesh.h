@@ -39,6 +39,12 @@ using MeshTelemetryRetryCb = std::function<void(uint32_t newTimeoutMs)>;
 // Raw reply to an anonymous request (CMD_SEND_ANON_REQ). Carries the request tag
 // (so the app matches it to RESP_CODE_SENT) and the verbatim response payload.
 using MeshAnonRespCb = std::function<void(uint32_t tag, const uint8_t* data, uint8_t len)>;
+// Reply to a status request (CMD_SEND_STATUS_REQ): sender pubkey + verbatim status blob.
+using MeshStatusRespCb = std::function<void(const uint8_t* pubKey, const uint8_t* data, uint8_t len)>;
+// Trace reply (CMD_SEND_TRACE_PATH → onTraceRecv): per-hop path hashes + SNRs and a final SNR.
+using MeshTraceCb = std::function<void(uint32_t tag, uint32_t auth, uint8_t flags,
+                                       const uint8_t* path_snrs, const uint8_t* path_hashes,
+                                       uint8_t path_len, int8_t final_snr)>;
 using MeshRoomMsgCb   = std::function<void(const ContactInfo& contact,
                                             const uint8_t* sender_prefix /* 4 B */,
                                             uint32_t sender_timestamp,
@@ -133,6 +139,8 @@ public:
     void onTelemetryRaw(MeshTelemetryRawCb cb) { _onTelemetryRaw = cb; }
     void onTelemetryRetry(MeshTelemetryRetryCb cb) { _onTelemetryRetry = cb; }
     void onAnonResponse(MeshAnonRespCb cb) { _onAnonResponse = cb; }
+    void onStatusResponse(MeshStatusRespCb cb) { _onStatusResponse = cb; }
+    void onTrace(MeshTraceCb cb) { _onTrace = cb; }
     void onRoomMsg(MeshRoomMsgCb cb)     { _onRoomMsg = cb; }
     void onRoomLogin(MeshRoomLoginCb cb) { _onRoomLogin = cb; }
 
@@ -159,6 +167,17 @@ public:
     bool sendAnonReqByKey(const uint8_t* pubKey, const uint8_t* data, uint8_t len,
                           uint32_t& tag, uint32_t& estTimeout);
     bool anonReqPending() const { return _pendingAnonTag != 0; }
+
+    // Send a status request (CMD_SEND_STATUS_REQ) to a known contact by pubkey. Fills
+    // tag + estTimeout; reply arrives via onStatusResponse. Single-slot. Returns false
+    // if the key isn't a known contact or the send fails.
+    bool sendStatusReqByKey(const uint8_t* pubKey, uint32_t& tag, uint32_t& estTimeout);
+    bool statusReqPending() const { return _pendingStatusTag != 0; }
+
+    // Send a path trace (CMD_SEND_TRACE_PATH) along an explicit path. Fills estTimeout;
+    // the reply arrives asynchronously via onTrace. Returns false on packet-pool failure.
+    bool sendTracePath(uint32_t tag, uint32_t auth, uint8_t flags,
+                       const uint8_t* path, uint8_t path_len, uint32_t& estTimeout);
 
     // True if the radio's outbound packet queue still has packets pending.
     bool outboundBusy() const;
@@ -235,6 +254,10 @@ protected:
     void onContactResponse(const ContactInfo& contact,
                            const uint8_t* data, uint8_t len) override;
 
+    // Trace reply (CMD_SEND_TRACE_PATH). Forwards per-hop path data to the companion.
+    void onTraceRecv(mesh::Packet* packet, uint32_t tag, uint32_t auth_code, uint8_t flags,
+                     const uint8_t* path_snrs, const uint8_t* path_hashes, uint8_t path_len) override;
+
     void sendFloodScoped(const ContactInfo& recipient, mesh::Packet* pkt, uint32_t delay_millis=0) override;
     void sendFloodScoped(const mesh::GroupChannel& channel, mesh::Packet* pkt, uint32_t delay_millis=0) override;
 
@@ -297,6 +320,8 @@ private:
     MeshTelemetryRawCb _onTelemetryRaw;
     MeshTelemetryRetryCb _onTelemetryRetry;
     MeshAnonRespCb  _onAnonResponse;
+    MeshStatusRespCb _onStatusResponse;
+    MeshTraceCb     _onTrace;
     MeshRoomMsgCb   _onRoomMsg;
     MeshRoomLoginCb _onRoomLogin;
     uint32_t        _pendingTelemTag = 0;
@@ -305,6 +330,9 @@ private:
     uint32_t        _pendingAnonTag = 0;
     uint8_t         _pendingAnonKey[PUB_KEY_SIZE] = {};
     uint32_t        _pendingAnonExpiry = 0;   // millis() deadline; clears the slot if no reply arrives
+    uint32_t        _pendingStatusTag = 0;
+    uint8_t         _pendingStatusKey[PUB_KEY_SIZE] = {};
+    uint32_t        _pendingStatusExpiry = 0; // millis() deadline; clears the slot if no reply arrives
 
     // Cached BaseChatMesh contact-index per registered room (avoids linear scan
     // on every login/post). Set during begin(); -1 means slot unused.

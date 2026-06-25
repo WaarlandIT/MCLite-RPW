@@ -82,6 +82,8 @@ enum : uint8_t {
     CMD_SEND_LOGIN             = 26,  // [1..32]=32-byte room/repeater pubkey [33..]=password (<=15)
     CMD_SEND_TELEMETRY_REQ     = 39,  // [1..3]=reserved [4..35]=32-byte contact pubkey
     CMD_SEND_ANON_REQ          = 57,  // [1..32]=pubkey [33..]=request data; reply via PUSH_CODE_BINARY_RESPONSE (ver13+)
+    CMD_SEND_STATUS_REQ        = 27,  // [1..32]=contact pubkey; reply via PUSH_CODE_STATUS_RESPONSE
+    CMD_SEND_TRACE_PATH        = 36,  // [1..4]=tag [5..8]=auth [9]=flags [10..]=path; reply via PUSH_CODE_TRACE_DATA
     // Device-settings writes (gate: permissions.settings == "full")
     CMD_SET_ADVERT_NAME        = 8,   // [1..]=name (<=20)
     CMD_SET_RADIO_PARAMS       = 11,  // [1..4]=freq kHz u32 [5..8]=bw Hz u32 [9]=sf [10]=cr [11]=repeat(opt, rejected if 1)
@@ -126,6 +128,8 @@ enum : uint8_t {
     PUSH_CODE_MSG_WAITING      = 0x83,
     PUSH_CODE_LOGIN_SUCCESS    = 0x85,  // [1]=perms [2..7]=prefix [8..11]=tag [12]=v7 ACL perms [13]=fw level
     PUSH_CODE_LOGIN_FAIL       = 0x86,  // [1]=reserved [2..7]=pubkey prefix
+    PUSH_CODE_STATUS_RESPONSE  = 0x87,  // reply to CMD_SEND_STATUS_REQ: [1]=reserved [2..7]=pubkey prefix [8..]=status blob
+    PUSH_CODE_TRACE_DATA       = 0x89,  // reply to CMD_SEND_TRACE_PATH: [1]=0 [2]=path_len [3]=flags [4..7]=tag [8..11]=auth [12..]=hashes+snrs+final
     PUSH_CODE_TELEMETRY_RESPONSE = 0x8B,  // [1]=reserved [2..7]=pubkey prefix [8..]=raw LPP
     PUSH_CODE_BINARY_RESPONSE  = 0x8C,  // reply to CMD_SEND_ANON_REQ: [1]=reserved [2..5]=tag [6..]=response payload
 };

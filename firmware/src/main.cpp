@@ -395,6 +395,17 @@ static void setupMeshCallbacks() {
         CompanionService::instance().onAnonResponse(tag, data, len);
     });
 
+    // Forward a status-request reply to the companion app (PUSH_CODE_STATUS_RESPONSE).
+    mesh.onStatusResponse([](const uint8_t* pubKey, const uint8_t* data, uint8_t len) {
+        CompanionService::instance().onStatusResponse(pubKey, data, len);
+    });
+
+    // Forward a path-trace reply to the companion app (PUSH_CODE_TRACE_DATA).
+    mesh.onTrace([](uint32_t tag, uint32_t auth, uint8_t flags, const uint8_t* snrs,
+                    const uint8_t* hashes, uint8_t path_len, int8_t final_snr) {
+        CompanionService::instance().onTraceData(tag, auth, flags, snrs, hashes, path_len, final_snr);
+    });
+
     mesh.onTelemetryRetry([](uint32_t newTimeoutMs) {
         UIManager::instance().onTelemetryRetry(newTimeoutMs);
     });

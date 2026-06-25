@@ -77,6 +77,12 @@ public:
     // tag from RESP_CODE_SENT). Direct push; no-op when no client is connected.
     void onAnonResponse(uint32_t tag, const uint8_t* data, uint8_t len);
 
+    // Status-request bridge: a CMD_SEND_STATUS_REQ reply -> PUSH_CODE_STATUS_RESPONSE
+    // (pubkey prefix + status blob). Trace bridge: a trace reply -> PUSH_CODE_TRACE_DATA.
+    void onStatusResponse(const uint8_t* pubKey, const uint8_t* data, uint8_t len);
+    void onTraceData(uint32_t tag, uint32_t auth, uint8_t flags, const uint8_t* path_snrs,
+                     const uint8_t* path_hashes, uint8_t path_len, int8_t final_snr);
+
     // Room-login bridge: MeshManager forwards a room/repeater login response here.
     // Drives PUSH_CODE_LOGIN_SUCCESS/FAIL, but only for logins the app initiated
     // (CMD_SEND_LOGIN) — a background/on-device auto-login pushes nothing. Also runs
@@ -108,6 +114,8 @@ private:
     void cmdSendChannelTxtMsg(size_t len);
     void cmdSendTelemetryReq(size_t len);   // request telemetry from a contact (over the mesh)
     void cmdSendAnonReq(size_t len);        // anonymous request to a node by pubkey (over the mesh)
+    void cmdSendStatusReq(size_t len);      // status request to a known contact (over the mesh)
+    void cmdSendTracePath(size_t len);      // trace a path and report per-hop SNR
     void cmdSendLogin(size_t len);          // log into an already-configured room/repeater
     void cmdSetChannel(size_t len);         // add a channel (or remove via empty name); reboots to apply
     void cmdAddUpdateContact(size_t len);   // add a contact, or edit an existing one's name (live, no reboot)

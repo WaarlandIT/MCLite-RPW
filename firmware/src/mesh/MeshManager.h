@@ -26,6 +26,10 @@ using OnTelemetryCallback  = std::function<void(const uint8_t* pubKey, const Tel
 using OnTelemetryRawCallback = std::function<void(const uint8_t* pubKey, const uint8_t* lpp, uint8_t lppLen)>;
 using OnTelemetryRetryCallback = std::function<void(uint32_t newTimeoutMs)>;
 using OnAnonResponseCallback = std::function<void(uint32_t tag, const uint8_t* data, uint8_t len)>;
+using OnStatusResponseCallback = std::function<void(const uint8_t* pubKey, const uint8_t* data, uint8_t len)>;
+using OnTraceCallback = std::function<void(uint32_t tag, uint32_t auth, uint8_t flags,
+                                           const uint8_t* path_snrs, const uint8_t* path_hashes,
+                                           uint8_t path_len, int8_t final_snr)>;
 using OnRoomMessageCallback = std::function<void(size_t roomIdx,
                                                   const String& roomName,
                                                   const uint8_t* senderPrefix /* 4 B */,
@@ -59,6 +63,8 @@ public:
     void onTelemetryRaw(OnTelemetryRawCallback cb) { _onTelemetryRaw = cb; }
     void onTelemetryRetry(OnTelemetryRetryCallback cb) { _onTelemetryRetry = cb; }
     void onAnonResponse(OnAnonResponseCallback cb) { _onAnonResponse = cb; }
+    void onStatusResponse(OnStatusResponseCallback cb) { _onStatusResponse = cb; }
+    void onTrace(OnTraceCallback cb) { _onTrace = cb; }
     void onRoomMessage(OnRoomMessageCallback cb) { _onRoomMsg = cb; }
     void onRoomLogin(OnRoomLoginCallback cb)     { _onRoomLogin = cb; }
 
@@ -86,6 +92,13 @@ public:
                           uint32_t& tag, uint32_t& estTimeout);
     // True while an anonymous request is awaiting a reply (single-slot).
     bool isAnonReqPending() const;
+
+    // Send a status request to a known contact by pubkey; reply via onStatusResponse.
+    bool sendStatusReqByKey(const uint8_t* pubKey, uint32_t& tag, uint32_t& estTimeout);
+    bool isStatusReqPending() const;
+    // Send a path trace along an explicit path; reply via onTrace.
+    bool sendTracePath(uint32_t tag, uint32_t auth, uint8_t flags,
+                       const uint8_t* path, uint8_t path_len, uint32_t& estTimeout);
 
     // ─── Contact sharing ───
     // Re-broadcast a contact's signed advert at zero hop so nearby nodes can add
@@ -148,6 +161,8 @@ private:
     OnTelemetryRawCallback _onTelemetryRaw;
     OnTelemetryRetryCallback _onTelemetryRetry;
     OnAnonResponseCallback _onAnonResponse;
+    OnStatusResponseCallback _onStatusResponse;
+    OnTraceCallback _onTrace;
     OnRoomMessageCallback _onRoomMsg;
     OnRoomLoginCallback   _onRoomLogin;
 

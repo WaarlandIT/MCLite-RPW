@@ -319,6 +319,13 @@ void MCLiteMesh::loop() {
         _pendingAnonTag = 0;
         memset(_pendingAnonKey, 0, PUB_KEY_SIZE);
     }
+
+    // Free the single status-request slot if its reply never arrived.
+    if (_pendingStatusTag != 0 && (int32_t)(millis() - _pendingStatusExpiry) >= 0) {
+        LOGLN("[MCLiteMesh] Status req timed out — clearing pending slot");
+        _pendingStatusTag = 0;
+        memset(_pendingStatusKey, 0, PUB_KEY_SIZE);
+    }
 }
 
 bool MCLiteMesh::advertise(const char* name, bool flood) {
@@ -976,6 +983,50 @@ bool MCLiteMesh::sendAnonReqByKey(const uint8_t* pubKey, const uint8_t* data, ui
     return true;
 }
 
+bool MCLiteMesh::sendStatusReqByKey(const uint8_t* pubKey, uint32_t& tag, uint32_t& estTimeout) {
+    if (!_ready || !pubKey) return false;
+    ContactInfo* ci = lookupContactByPubKey(pubKey, PUB_KEY_SIZE);
+    if (!ci) {
+        LOGLN("[MCLiteMesh] Status req: unknown contact key");
+        return false;
+    }
+    tag = 0;
+    int result = sendRequest(*ci, REQ_TYPE_GET_STATUS, tag, estTimeout);
+    if (result == MSG_SEND_FAILED) {
+        LOGF("[MCLiteMesh] Status req send failed to %s\n", ci->name);
+        return false;
+    }
+    _pendingStatusTag = tag;
+    memcpy(_pendingStatusKey, ci->id.pub_key, PUB_KEY_SIZE);
+    _pendingStatusExpiry = millis() + estTimeout + 5000;   // free the slot if no reply (see anon-req)
+    LOGF("[MCLiteMesh] Status req sent (tag=%u, timeout=%ums)\n", tag, estTimeout);
+    return true;
+}
+
+bool MCLiteMesh::sendTracePath(uint32_t tag, uint32_t auth, uint8_t flags,
+                               const uint8_t* path, uint8_t path_len, uint32_t& estTimeout) {
+    if (!_ready) return false;
+    mesh::Packet* pkt = createTrace(tag, auth, flags);
+    if (!pkt) {
+        LOGLN("[MCLiteMesh] Trace: packet pool empty");
+        return false;
+    }
+    uint8_t path_sz = flags & 0x03;
+    sendDirect(pkt, path, path_len);
+    uint32_t airtime = _radio ? _radio->getEstAirtimeFor(pkt->payload_len + pkt->path_len + 2) : 0;
+    estTimeout = calcDirectTimeoutMillisFor(airtime, path_len >> path_sz);
+    LOGF("[MCLiteMesh] Trace sent (tag=%u, hops=%u)\n", tag, (unsigned)(path_len >> path_sz));
+    return true;
+}
+
+void MCLiteMesh::onTraceRecv(mesh::Packet* packet, uint32_t tag, uint32_t auth_code, uint8_t flags,
+                             const uint8_t* path_snrs, const uint8_t* path_hashes, uint8_t path_len) {
+    LOGF("[MCLiteMesh] Trace reply (tag=%u, path_len=%u)\n", tag, path_len);
+    if (_onTrace)
+        _onTrace(tag, auth_code, flags, path_snrs, path_hashes, path_len,
+                 (int8_t)(packet->getSNR() * 4));
+}
+
 bool MCLiteMesh::requestTelemetry(size_t contactIdx, uint32_t& estTimeout) {
     if (!_ready) return false;
 
@@ -1158,6 +1209,21 @@ void MCLiteMesh::onContactResponse(const ContactInfo& contact,
             _pendingAnonTag = 0;
             memset(_pendingAnonKey, 0, PUB_KEY_SIZE);
             if (_onAnonResponse) _onAnonResponse(anonTag, data + 4, len - 4);
+            return;
+        }
+    }
+
+    // Status-request reply (CMD_SEND_STATUS_REQ): match the reflected tag + sender key,
+    // forward the verbatim status blob (data+4) to the companion. Same placement reason
+    // as the anon branch above.
+    {
+        uint32_t statusTag;
+        memcpy(&statusTag, data, 4);
+        if (_pendingStatusTag != 0 && statusTag == _pendingStatusTag &&
+            memcmp(contact.id.pub_key, _pendingStatusKey, PUB_KEY_SIZE) == 0) {
+            _pendingStatusTag = 0;
+            memset(_pendingStatusKey, 0, PUB_KEY_SIZE);
+            if (_onStatusResponse) _onStatusResponse(contact.id.pub_key, data + 4, len - 4);
             return;
         }
     }

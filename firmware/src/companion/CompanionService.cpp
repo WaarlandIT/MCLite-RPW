@@ -112,6 +112,8 @@ void CompanionService::handleFrame(size_t len) {
         case CMD_SEND_CHANNEL_TXT_MSG: cmdSendChannelTxtMsg(len); break;
         case CMD_SEND_TELEMETRY_REQ: cmdSendTelemetryReq(len); break;
         case CMD_SEND_ANON_REQ:      cmdSendAnonReq(len);      break;
+        case CMD_SEND_STATUS_REQ:    cmdSendStatusReq(len);    break;
+        case CMD_SEND_TRACE_PATH:    cmdSendTracePath(len);    break;
         case CMD_SEND_LOGIN:       cmdSendLogin(len);       break;
         case CMD_GET_DEVICE_TIME:  cmdGetDeviceTime();      break;
         case CMD_SET_DEVICE_TIME:  cmdSetDeviceTime(len);   break;
@@ -380,6 +382,87 @@ void CompanionService::onAnonResponse(uint32_t tag, const uint8_t* data, uint8_t
     memcpy(&_out[2], &tag, 4);
     if (n > 0 && data) memcpy(&_out[6], data, n);
     _iface->writeFrame(_out, 6 + (n > 0 ? n : 0));
+}
+
+// CMD_SEND_STATUS_REQ -> RESP_CODE_SENT. [1..32]=contact pubkey. Sends a MeshCore status
+// request to a known contact; the async reply arrives as PUSH_CODE_STATUS_RESPONSE (see
+// onStatusResponse). Single pending slot. Ungated (benign read-only diagnostic).
+void CompanionService::cmdSendStatusReq(size_t len) {
+    if (len < 1 + PUB_KEY_SIZE) { writeErr(ERR_CODE_ILLEGAL_ARG); return; }
+    auto* mesh = MeshManager::instance().mesh();
+    if (!mesh) { writeErr(ERR_CODE_BAD_STATE); return; }
+    const uint8_t* pubKey = &_cmd[1];
+    if (!mesh->lookupContactByPubKey(pubKey, PUB_KEY_SIZE)) { writeErr(ERR_CODE_NOT_FOUND); return; }
+    if (MeshManager::instance().isStatusReqPending()) { writeErr(ERR_CODE_BAD_STATE); return; }
+
+    uint32_t tag = 0, est_timeout = 0;
+    if (!MeshManager::instance().sendStatusReqByKey(pubKey, tag, est_timeout)) {
+        writeErr(ERR_CODE_BAD_STATE); return;
+    }
+    _out[0] = RESP_CODE_SENT;
+    _out[1] = 0;
+    memcpy(&_out[2], &tag, 4);
+    memcpy(&_out[6], &est_timeout, 4);
+    _iface->writeFrame(_out, 10);
+}
+
+// MeshManager forwards a status reply here -> PUSH_CODE_STATUS_RESPONSE.
+// Layout: [0]=0x87 [1]=reserved(0) [2..7]=6-byte pubkey prefix [8..]=verbatim status blob.
+void CompanionService::onStatusResponse(const uint8_t* pubKey, const uint8_t* data, uint8_t len) {
+    if (!clientConnected() || !pubKey) return;
+    int n = len;
+    if (n > MAX_FRAME_SIZE - 8) n = MAX_FRAME_SIZE - 8;
+    _out[0] = PUSH_CODE_STATUS_RESPONSE;
+    _out[1] = 0;
+    memcpy(&_out[2], pubKey, 6);
+    if (n > 0 && data) memcpy(&_out[8], data, n);
+    _iface->writeFrame(_out, 8 + (n > 0 ? n : 0));
+}
+
+// CMD_SEND_TRACE_PATH -> RESP_CODE_SENT. Layout: [1..4]=tag [5..8]=auth [9]=flags [10..]=path.
+// Traces the given path; the async reply arrives as PUSH_CODE_TRACE_DATA (see onTraceData).
+// Ungated (benign diagnostic). path_sz = flags & 0x03 (encoded path-hash width).
+void CompanionService::cmdSendTracePath(size_t len) {
+    if (len <= 10) { writeErr(ERR_CODE_ILLEGAL_ARG); return; }
+    uint8_t path_len = (uint8_t)(len - 10);
+    uint8_t flags = _cmd[9];
+    uint8_t path_sz = flags & 0x03;
+    if ((path_len >> path_sz) > MAX_PATH_SIZE || (path_len % (1 << path_sz)) != 0) {
+        writeErr(ERR_CODE_ILLEGAL_ARG); return;
+    }
+    uint32_t tag = 0, auth = 0, est_timeout = 0;
+    memcpy(&tag,  &_cmd[1], 4);
+    memcpy(&auth, &_cmd[5], 4);
+    if (!MeshManager::instance().sendTracePath(tag, auth, flags, &_cmd[10], path_len, est_timeout)) {
+        writeErr(ERR_CODE_BAD_STATE); return;
+    }
+    _out[0] = RESP_CODE_SENT;
+    _out[1] = 0;
+    memcpy(&_out[2], &tag, 4);
+    memcpy(&_out[6], &est_timeout, 4);
+    _iface->writeFrame(_out, 10);
+}
+
+// MeshManager forwards a trace reply here -> PUSH_CODE_TRACE_DATA. Frame mirrors the
+// reference onTraceRecv: [0x89][0][path_len][flags][tag:4][auth:4][hashes:path_len]
+// [snrs:path_len>>path_sz][final_snr:1].
+void CompanionService::onTraceData(uint32_t tag, uint32_t auth, uint8_t flags, const uint8_t* path_snrs,
+                                   const uint8_t* path_hashes, uint8_t path_len, int8_t final_snr) {
+    if (!clientConnected()) return;
+    uint8_t path_sz = flags & 0x03;
+    int snr_len = path_len >> path_sz;
+    if (12 + path_len + snr_len + 1 > MAX_FRAME_SIZE) return;   // too long (matches reference guard)
+    int i = 0;
+    _out[i++] = PUSH_CODE_TRACE_DATA;
+    _out[i++] = 0;
+    _out[i++] = path_len;
+    _out[i++] = flags;
+    memcpy(&_out[i], &tag,  4); i += 4;
+    memcpy(&_out[i], &auth, 4); i += 4;
+    if (path_len > 0 && path_hashes) { memcpy(&_out[i], path_hashes, path_len); i += path_len; }
+    if (snr_len  > 0 && path_snrs)   { memcpy(&_out[i], path_snrs, snr_len);    i += snr_len;  }
+    _out[i++] = (uint8_t)final_snr;
+    _iface->writeFrame(_out, i);
 }
 
 // CMD_SEND_LOGIN -> RESP_CODE_SENT. Layout: [1..32]=32-byte room pubkey, [33..]=password

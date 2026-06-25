@@ -145,6 +145,17 @@ void MeshManager::wireCallbacks() {
         if (_onAnonResponse) _onAnonResponse(tag, data, len);
     });
 
+    // Status-request reply (companion forwards as PUSH_CODE_STATUS_RESPONSE)
+    _mesh->onStatusResponse([this](const uint8_t* pubKey, const uint8_t* data, uint8_t len) {
+        if (_onStatusResponse) _onStatusResponse(pubKey, data, len);
+    });
+
+    // Trace reply (companion forwards as PUSH_CODE_TRACE_DATA)
+    _mesh->onTrace([this](uint32_t tag, uint32_t auth, uint8_t flags, const uint8_t* snrs,
+                          const uint8_t* hashes, uint8_t path_len, int8_t final_snr) {
+        if (_onTrace) _onTrace(tag, auth, flags, snrs, hashes, path_len, final_snr);
+    });
+
     // Advertisement received
     _mesh->onAdvert([this](const ContactInfo& contact, bool isNew) {
         // Update last-seen in our contact store
@@ -364,6 +375,21 @@ bool MeshManager::sendAnonReqByKey(const uint8_t* pubKey, const uint8_t* data, u
 
 bool MeshManager::isAnonReqPending() const {
     return _mesh && _mesh->anonReqPending();
+}
+
+bool MeshManager::sendStatusReqByKey(const uint8_t* pubKey, uint32_t& tag, uint32_t& estTimeout) {
+    if (!_mesh || !_radioReady) return false;
+    return _mesh->sendStatusReqByKey(pubKey, tag, estTimeout);
+}
+
+bool MeshManager::isStatusReqPending() const {
+    return _mesh && _mesh->statusReqPending();
+}
+
+bool MeshManager::sendTracePath(uint32_t tag, uint32_t auth, uint8_t flags,
+                                const uint8_t* path, uint8_t path_len, uint32_t& estTimeout) {
+    if (!_mesh || !_radioReady) return false;
+    return _mesh->sendTracePath(tag, auth, flags, path, path_len, estTimeout);
 }
 
 void MeshManager::clearPendingTelemetry() {
