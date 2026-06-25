@@ -87,7 +87,7 @@ enum : uint8_t {
     CMD_SET_RADIO_TX_POWER     = 12,  // [1]=int8 dBm
     CMD_SET_DEVICE_PIN         = 37,  // [1..4]=u32 PIN (0 or 100000-999999; 0 = regenerate)
     CMD_SET_PATH_HASH_MODE     = 61,  // [1]=0 (reserved) [2]=mode (0/1/2 -> 1/2/3 bytes per hop)
-    CMD_SET_FLOOD_SCOPE_KEY    = 54,  // [1]=0 (reserved) [2..17]=16-byte key (absent = null); session-only
+    CMD_SET_FLOOD_SCOPE_KEY    = 54,  // [1]=0 [2..17]=16-byte key (absent=null); [1]=1 = explicit un-scoped (ver12+); session-only
     CMD_SET_DEFAULT_FLOOD_SCOPE = 63, // [1..31]=name [32..47]=16-byte key (len==1 = clear); persistent region
     CMD_GET_DEFAULT_FLOOD_SCOPE = 64, // -> RESP_CODE_DEFAULT_FLOOD_SCOPE
     CMD_RESET_PATH             = 13,  // [1..32]=contact pubkey; reset its learned path (flood rediscover)
@@ -138,10 +138,12 @@ enum : uint8_t {
     ERR_CODE_ILLEGAL_ARG       = 6,
 };
 
-// Firmware/protocol version code we advertise in RESP_CODE_DEVICE_INFO. Matches
-// the companion-v1.15.0 protocol level so clients negotiate the v3 message
-// formats we support; the actual negotiated app version is tracked per session.
-static constexpr uint8_t COMPANION_FW_VER_CODE = 11;
+// Firmware/protocol version code we advertise in RESP_CODE_DEVICE_INFO. 12 = the
+// companion-v1.16.0 level for the features we implement: explicit-unscoped flood
+// scope (CMD_SET_FLOOD_SCOPE_KEY [1]=1). NOTE: do not raise to 13 until anon
+// request/response to non-contact nodes is implemented. The negotiated app version
+// is tracked per session.
+static constexpr uint8_t COMPANION_FW_VER_CODE = 12;
 
 // Advert type this node identifies as (ADV_TYPE_CHAT in AdvertDataHelpers.h).
 static constexpr uint8_t COMPANION_ADV_TYPE_CHAT = 1;

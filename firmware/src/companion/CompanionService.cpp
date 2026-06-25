@@ -951,16 +951,21 @@ void CompanionService::cmdGetDefaultFloodScope() {
     _iface->writeFrame(_out, 1 + 31 + 16);
 }
 
-// CMD_SET_FLOOD_SCOPE_KEY -> OK/ERR. Session-only live override (raw key, no persist). [1]=0
-// reserved, [2..17]=key (absent = null). Reverts to the config-derived scope on reboot.
+// CMD_SET_FLOOD_SCOPE_KEY -> OK/ERR. Session-only live override (raw key, no persist). Reverts
+// to the config-derived scope on reboot.
+//   [1]=0: [2..17]=key (absent = null/un-scoped)        — set the live global scope key
+//   [1]=1: explicit un-scoped (ver 12+) — force a null global scope; no key bytes needed
+// A null global scope makes inheriting floods (channels/DMs with no per-channel scope) go out
+// with no transport code, matching MeshCore 1.16's send_unscoped behavior.
 void CompanionService::cmdSetFloodScopeKey(size_t len) {
-    if (len < 2 || _cmd[1] != 0) { writeErr(ERR_CODE_ILLEGAL_ARG); return; }
+    if (len < 2 || _cmd[1] > 1) { writeErr(ERR_CODE_ILLEGAL_ARG); return; }
     if (!settingsAllowed()) { writeErr(ERR_CODE_BAD_STATE); return; }
     auto* mesh = MeshManager::instance().mesh();
     if (!mesh) { writeErr(ERR_CODE_BAD_STATE); return; }
     uint8_t key[16];
-    if (len >= 2 + 16) memcpy(key, &_cmd[2], 16);
-    else               memset(key, 0, 16);             // null = no scope
+    if (_cmd[1] == 1)            memset(key, 0, 16);    // ver-12: explicit un-scoped (null scope)
+    else if (len >= 2 + 16)      memcpy(key, &_cmd[2], 16);
+    else                         memset(key, 0, 16);    // null = no scope
     mesh->setGlobalScope(key);
     writeOK();
 }
