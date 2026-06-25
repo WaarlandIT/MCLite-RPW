@@ -1127,48 +1127,50 @@ bool CompanionService::trySendSyncResponse() {
     return _iface->writeFrame(&f, 1) == 1;
 }
 
-// Position the backfill cursor at the next inbound, resolvable message and build its
-// sync frame into _out. Returns the frame length, or 0 when history is exhausted.
-// Walks MessageStore in stable insertion order; skips self-sent messages and whole
-// conversations whose contact/channel can't be resolved (e.g. a removed contact —
-// we can't reconstruct its pubkey from a DM shortId).
+// Position the backfill cursor at the next message and build its sync frame into _out.
+// Returns the frame length, or 0 when history is exhausted. Walks MessageStore in stable
+// insertion order and replays BOTH directions: received messages and device-composed
+// (fromSelf) ones, so a freshly-connected app gets the full on-device history. (App-
+// composed sends aren't stored here — cmdSendTxtMsg doesn't addMessage — so there's no
+// duplication.) Whole conversations whose contact/channel can't be resolved are skipped.
+//
+// Direction note: the stock companion protocol has only *received* message frames. For
+// CHANNELS that's fine — posts carry the sender inline, so our own posts read correctly
+// with the device name. For DMs there is no outgoing frame, so a device-composed DM is
+// delivered as a CONTACT_MSG_RECV from the contact and the app shows it on the incoming
+// side. See known-issues.
 int CompanionService::buildNextBackfillFrame() {
     auto& store = MessageStore::instance();
     auto& cs = ContactStore::instance();
 
     while (_bfConvoIdx < (int)store.conversationCount()) {
         Conversation* convo = store.conversationByIndex((size_t)_bfConvoIdx);
-        if (convo) {
+        if (convo && _bfMsgIdx < (int)convo->messages.size()) {
+            const Message& m = convo->messages[_bfMsgIdx];
+
             if (convo->convoId.type == ConvoId::DM) {
                 Contact* sc = nullptr;
                 for (size_t k = 0; k < cs.count(); k++) {
                     Contact* c = cs.findByIndex(k);
                     if (c && c->shortId() == convo->convoId.id) { sc = c; break; }
                 }
-                if (sc) {
-                    while (_bfMsgIdx < (int)convo->messages.size()) {
-                        const Message& m = convo->messages[_bfMsgIdx];
-                        if (!m.fromSelf)
-                            return buildContactRecvFrame(sc->publicKey, m.timestamp, m.text.c_str());
-                        _bfMsgIdx++;
-                    }
-                }
+                if (sc)
+                    return buildContactRecvFrame(sc->publicKey, m.timestamp, m.text.c_str());
+                // unresolved contact → skip the whole conversation (fall through)
             } else if (convo->convoId.type == ConvoId::CHANNEL) {
                 int meshIdx = channelIdxByName(convo->convoId.id);
                 if (meshIdx >= 0) {
-                    while (_bfMsgIdx < (int)convo->messages.size()) {
-                        const Message& m = convo->messages[_bfMsgIdx];
-                        if (!m.fromSelf) {
-                            String wire = m.senderName.length() ? (m.senderName + ": " + m.text) : m.text;
-                            return buildChannelRecvFrame((uint8_t)meshIdx, m.timestamp, wire.c_str());
-                        }
-                        _bfMsgIdx++;
-                    }
+                    // Our own posts use the device name; received posts keep their sender.
+                    String sender = m.fromSelf ? ConfigManager::instance().config().deviceName
+                                               : m.senderName;
+                    String wire = sender.length() ? (sender + ": " + m.text) : m.text;
+                    return buildChannelRecvFrame((uint8_t)meshIdx, m.timestamp, wire.c_str());
                 }
+                // unresolved channel → skip the whole conversation (fall through)
             }
             // ROOM conversations are not exposed over the companion link.
         }
-        _bfConvoIdx++;        // this conversation done (or unresolvable) — next one
+        _bfConvoIdx++;        // conversation exhausted or unresolvable — next one
         _bfMsgIdx = 0;
     }
     return 0;                 // exhausted
