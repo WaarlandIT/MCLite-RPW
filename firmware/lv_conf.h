@@ -13,10 +13,10 @@
 
 /* Memory */
 #define LV_MEM_CUSTOM 1
-#define LV_MEM_CUSTOM_INCLUDE <stdlib.h>
-#define LV_MEM_CUSTOM_ALLOC   malloc
+#define LV_MEM_CUSTOM_INCLUDE "lv_psram_alloc.h"
+#define LV_MEM_CUSTOM_ALLOC   lv_psram_malloc
 #define LV_MEM_CUSTOM_FREE    free
-#define LV_MEM_CUSTOM_REALLOC realloc
+#define LV_MEM_CUSTOM_REALLOC lv_psram_realloc
 
 /* Display — sized to the larger of supported boards (T-Watch Ultra 410x502).
    T-Deck Plus (320x240) uses less than the cap; the unused PSRAM is wasted
