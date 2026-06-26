@@ -126,6 +126,7 @@ struct BleConfig {
 };
 
 struct DebugConfig {
+    bool showMemory = false;     // Enable display of memory usage in status bar.
     bool screenshots = false;    // Enable save-screen-to-SD (/screenshots/*.bmp). Debug aid, default off.
 };
 

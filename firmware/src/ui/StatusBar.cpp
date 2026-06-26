@@ -154,6 +154,11 @@ void StatusBar::create(lv_obj_t* parent) {
 
     // --- Everything below is right-aligned (no flex_grow) ---
 
+    _lblMem = lv_label_create(_bar);
+    lv_obj_set_style_text_font(_lblMem, FONT_SMALL, 0);
+    lv_obj_set_style_text_color(_lblMem, theme::TEXT_SECONDARY(), 0);
+    lv_label_set_text(_lblMem, "");
+
     // Sound icon — clickable label, larger font for tap target
     _soundIcon = lv_label_create(_bar);
     lv_obj_set_style_text_font(_soundIcon, FONT_NORMAL, 0);
@@ -192,11 +197,6 @@ void StatusBar::create(lv_obj_t* parent) {
     _lblTime = lv_label_create(_bar);
     lv_obj_set_style_text_font(_lblTime, FONT_SMALL, 0);
     lv_obj_set_style_text_color(_lblTime, theme::TEXT_PRIMARY(), 0);
-
-    _lblMem = lv_label_create(_bar);
-    lv_obj_set_style_text_font(_lblMem, FONT_SMALL, 0);
-    lv_obj_set_style_text_color(_lblMem, theme::TEXT_SECONDARY(), 0);
-    lv_label_set_text(_lblMem, "");
 #endif
 
     updateSoundIcon();
@@ -319,28 +319,33 @@ void StatusBar::update() {
         lv_label_set_text(_lblTime, "");
     }
 
-    // Memory usage — PSRAM and internal DRAM, logged every update and shown in status bar
 #if defined(ESP32)
+    // Memory usage — PSRAM and internal DRAM, logged every update and shown in status bar
     {
-        const size_t dram_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-        const size_t dram_tot  = heap_caps_get_total_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-        const size_t dram_min  = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-        const size_t ps_free   = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-        const size_t ps_tot    = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
-        const uint8_t ramPct   = dram_tot > 0 ? (uint8_t)(100 - (dram_free * 100 / dram_tot)) : 0;
-        const uint8_t psrPct   = ps_tot   > 0 ? (uint8_t)(100 - (ps_free   * 100 / ps_tot))   : 0;
         if (_lblMem) {
-            char memBuf[16];
-            if (ps_tot > 0)
-                snprintf(memBuf, sizeof(memBuf), "P%u%% R%u%%", (unsigned)psrPct, (unsigned)ramPct);
-            else
-                snprintf(memBuf, sizeof(memBuf), "R%u%%", (unsigned)ramPct);
-            lv_label_set_text(_lblMem, memBuf);
+            if (cfg.debug.showMemory) {
+                const size_t dram_free = heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+                const size_t dram_tot  = heap_caps_get_total_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+                const size_t dram_min  = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+                const size_t ps_free   = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+                const size_t ps_tot    = heap_caps_get_total_size(MALLOC_CAP_SPIRAM);
+                const uint8_t ramPct   = dram_tot > 0 ? (uint8_t)(100 - (dram_free * 100 / dram_tot)) : 0;
+                const uint8_t psrPct   = ps_tot   > 0 ? (uint8_t)(100 - (ps_free   * 100 / ps_tot))   : 0;
+                char memBuf[16];
+                if (ps_tot > 0)
+                    snprintf(memBuf, sizeof(memBuf), "P%u%% R%u%%", (unsigned)psrPct, (unsigned)ramPct);
+                else
+                    snprintf(memBuf, sizeof(memBuf), "R%u%%", (unsigned)ramPct);
+                lv_label_set_text(_lblMem, memBuf);
+                
+                LOGF("[Mem] DRAM %u/%u KB (min %u KB), PSRAM %u/%u KB\n",
+                     (unsigned)(dram_free / 1024), (unsigned)(dram_tot / 1024),
+                     (unsigned)(dram_min / 1024),
+                     (unsigned)(ps_free / 1024), (unsigned)(ps_tot / 1024));
+            } else {
+                lv_label_set_text(_lblMem, "");
+            }
         }
-        LOGF("[Mem] DRAM %u/%u KB (min %u KB), PSRAM %u/%u KB\n",
-             (unsigned)(dram_free / 1024), (unsigned)(dram_tot / 1024),
-             (unsigned)(dram_min / 1024),
-             (unsigned)(ps_free / 1024), (unsigned)(ps_tot / 1024));
     }
 #endif
 

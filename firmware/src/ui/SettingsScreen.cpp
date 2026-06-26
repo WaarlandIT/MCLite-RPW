@@ -511,8 +511,9 @@ void SettingsScreen::buildDisplay() {
                       1, 255, cfg.display.kbdBrightness, String(cfg.display.kbdBrightness), true);
     addSwitchRowGated(t("lbl_emoji"), cfg.display.emoji, emojiToggleCb, nullptr, false);
 
-    // Screenshots fold into Display (no separate Debug screen / header).
-    addSwitchRowGated(t("lbl_screenshots"), cfg.debug.screenshots, screenshotsToggleCb, nullptr, false);
+    // Screenshots and debug overlays fold into Display (no separate Debug screen / header).
+    addSwitchRowGated(t("lbl_screenshots"),  cfg.debug.screenshots, screenshotsToggleCb,  nullptr, false);
+    addSwitchRowGated(t("lbl_show_memory"),  cfg.debug.showMemory,  showMemoryToggleCb,   nullptr, false);
 }
 
 void SettingsScreen::buildMessaging() {
@@ -2909,6 +2910,13 @@ void SettingsScreen::screenshotsToggleCb(lv_event_t* e) {
     lv_obj_t* sw = lv_event_get_target(e);
     bool newVal = lv_obj_has_state(sw, LV_STATE_CHECKED);
     mgr.config().debug.screenshots = newVal;
+    g_dsDirty = true;
+}
+
+void SettingsScreen::showMemoryToggleCb(lv_event_t* e) {
+    auto& mgr = ConfigManager::instance();
+    lv_obj_t* sw = lv_event_get_target(e);
+    mgr.config().debug.showMemory = lv_obj_has_state(sw, LV_STATE_CHECKED);
     g_dsDirty = true;
 }
 
