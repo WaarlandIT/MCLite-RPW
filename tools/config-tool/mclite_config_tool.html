@@ -4341,6 +4341,7 @@ function renderSharePresetIncluded(cfg) {
                ', location <code>' + esc(cfg.messaging.location_format) + '</code>' +
                ', canned ' + (cfg.messaging.canned_messages ? 'on' : 'off') +
                (cfg.messaging.allow_mute ? ', mute chats on' : '') +
+               (cfg.messaging.show_hop_count ? ', hop count on' : '') +
                ', request telemetry ' + (cfg.messaging.request_telemetry ? 'on' : 'off') +
                ', show telemetry <code>' + esc(cfg.messaging.show_telemetry) + '</code>');
   }
