@@ -273,6 +273,7 @@ private:
     static void themeRowCb(lv_event_t* e);   // opens the theme picker (reboots to apply)
     static void emojiToggleCb(lv_event_t* e);
     static void screenshotsToggleCb(lv_event_t* e);
+    static void showMemoryToggleCb(lv_event_t* e);
 };
 
 }  // namespace mclite

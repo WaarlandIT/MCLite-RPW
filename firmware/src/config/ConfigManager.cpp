@@ -393,6 +393,7 @@ bool ConfigManager::parseJson(const String& json) {
 
     // Debug — missing block defaults to all-off
     _config.debug.screenshots = doc["debug"]["screenshots"] | defaults::SCREENSHOTS_ENABLED;
+    _config.debug.showMemory  = doc["debug"]["show_memory"]  | false;
 
     LOGF("[Config] Loaded: device=%s, contacts=%d, channels=%d\n",
                   _config.deviceName.c_str(),
@@ -562,6 +563,9 @@ String ConfigManager::toJson() const {
     // Debug — only emit when something is enabled (keeps the file clean by default).
     if (_config.debug.screenshots) {
         doc["debug"]["screenshots"] = _config.debug.screenshots;
+    }
+    if (_config.debug.showMemory) {
+        doc["debug"]["show_memory"] = _config.debug.showMemory;
     }
 
     String output;

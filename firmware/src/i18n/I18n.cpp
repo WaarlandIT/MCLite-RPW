@@ -134,6 +134,7 @@ const DefaultString DEFAULT_STRINGS[] = {
     {"lbl_lock_mode",       "Lock Mode"},
     {"lbl_auto_lock",       "Auto-Lock"},
     {"lbl_screenshots",     "Save Screenshots"},
+    {"lbl_show_memory",     "Show Memory Usage"},
     {"lbl_theme",           "Theme"},
     {"theme_dark",          "Dark"},
     {"theme_light",         "Light"},
