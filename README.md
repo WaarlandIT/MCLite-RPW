@@ -50,7 +50,7 @@ New here? Three steps, no toolchain or install needed:
 2. **Configure** your identity, contacts, and channels in the offline [config tool](https://laserir.github.io/MCLite/tools/config-tool/mclite_config_tool.html), then download `config.json`.
 3. **Copy** `config.json` to the SD card, insert it, and power on.
 
-That's it. Full walkthrough — including updates and companion mode — in [Getting Started](#getting-started) below.
+That's it. Full walkthrough in [Getting Started](#getting-started) below, plus [Companion mode](#companion-mode) for pairing a phone/desktop/CLI.
 
 ## Features
 
@@ -327,11 +327,11 @@ Once MCLite is installed you can update it without a computer:
 - **From SD card** -- copy a newer merged binary (`mclite-v*.bin` for the T-Deck Plus, `mclite-watch-v*.bin` for the T-Watch Ultra) to the SD card. On the next boot the device detects it and offers **Install / Cancel**, then flashes and reboots. The file is renamed afterwards so it won't re-prompt.
 - **Over WiFi** -- on the device go to **Admin → WiFi**, switch WiFi on, pick your network and enter the password (saved for next time), then tap **Check for updates**. If a newer release exists on GitHub it downloads and installs. Enable **auto-update** (config tool → WiFi, or it checks on boot when on) to be prompted automatically.
 
-### Companion mode
+## Companion mode
 
 Use a phone, desktop, or CLI as a companion to the radio while the device keeps working normally — received and app-sent messages appear in **both** places at once. (One exception: messages you type *on the device* don't sync to the app — see the **Important limitation** note under Notes below.) MCLite speaks the standard MeshCore companion protocol over three transports (**one active at a time**): **Bluetooth**, **WiFi**, and **USB**. A companion can send/receive messages and **manage conversations** — add, rename, and remove contacts; add and remove channels; log into rooms — gated by `permissions.conversation_management`. With `permissions.settings` set to `full` it can also change **device settings** — device name, radio parameters (frequency/SF/BW/CR), TX power, BLE pairing PIN, path-hash mode, and region/scope (the last two handy for matching a large 3-byte mesh). The **identity/keys**, advert **location** (MCLite advertises GPS at the configured precision), and **auto-add** stay device-managed by design and are refused.
 
-#### Bluetooth (official mobile apps)
+### Bluetooth (official mobile apps)
 
 The way to use the official MeshCore **iOS / Android** apps.
 
@@ -341,7 +341,7 @@ The way to use the official MeshCore **iOS / Android** apps.
 
 The Bluetooth status-bar icon turns **green** while a client is connected.
 
-#### WiFi (desktop / CLI on your LAN)
+### WiFi (desktop / CLI on your LAN)
 
 1. On the device: **Admin → WiFi**, switch WiFi **on** and connect to your network.
 2. Turn on the **WiFi Companion** switch (enabled once WiFi is connected). The row shows `Companion <ip>:5000`.
@@ -352,7 +352,7 @@ The Bluetooth status-bar icon turns **green** while a client is connected.
    ```
    (`meshcore.js` and `meshcore_py` work too.) The status-bar WiFi icon turns **green** while a client is attached. Note: the WiFi transport has **no pairing/auth** (the protocol's only auth is the Bluetooth passkey) — only enable it on networks you trust.
 
-#### USB (wired, computer)
+### USB (wired, computer)
 
 Turn on the **USB Companion** switch (**Admin → USB**; works with WiFi off), then connect over the USB-CDC port:
 ```
@@ -360,7 +360,7 @@ meshcore-cli -s /dev/ttyACM0 infos
 ```
 While USB companion is active the device's **serial debug logging is muted** — the binary protocol and log text can't share the one USB port (there's no spare log UART on these boards). Logs resume the moment you turn it off. The charge bolt turns **green** while a USB client is bridging.
 
-#### Notes
+### Notes
 
 - **One transport, one client at a time** — the modes are mutually exclusive by design (the protocol is single-session). Turning one on turns the others off.
 - **WiFi vs Bluetooth can't run together** — they share the 2.4 GHz radio and there isn't enough RAM for both. Enabling Bluetooth turns WiFi off; once Bluetooth has been used, **switching back to WiFi needs a reboot** (the BLE stack can't be freed at runtime). The WiFi screen shows a notice and a **Reboot** button when this applies.
