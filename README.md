@@ -462,19 +462,7 @@ All devices in your group must use the same radio settings. Compatible with both
 
 MCLite firmware is released under the **MIT License**. See [LICENSE](LICENSE) for details.
 
-MCLite uses the following open-source libraries:
-
-| Library | License |
-|---------|---------|
-| MeshCore | MIT |
-| LVGL | MIT |
-| LovyanGFX | MIT + BSD-2-Clause |
-| ArduinoJson | MIT |
-| RadioLib | MIT |
-| TinyGPSPlus | LGPL-2.1 |
-| Arduino ESP32 core | LGPL-2.1 |
-
-LGPL-2.1 libraries are dynamically linked. Users may replace them by rebuilding with PlatformIO. See [LICENSES.md](LICENSES.md) for full copyright notices.
+It builds on several open-source libraries and assets (MeshCore, LVGL, LovyanGFX, ArduinoJson, RadioLib, TinyGPSPlus, the Arduino ESP32 core, OpenMoji, and more). The full list — with versions and copyright notices — is in [LICENSES.md](LICENSES.md). The LGPL-2.1 libraries (TinyGPSPlus, Arduino ESP32 core) are dynamically linked and may be replaced by rebuilding with PlatformIO.
 
 ## Contributing
 
