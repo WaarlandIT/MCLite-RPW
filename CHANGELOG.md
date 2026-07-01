@@ -28,6 +28,14 @@ Targets: **T-Deck Plus** (`mclite-vX.Y.Z.bin`) and **T-Watch Ultra** (`mclite-wa
 - **Chat bubbles are freed when you leave a chat**, so a previously-viewed conversation no longer keeps its
   rendered bubbles in memory while you're on other screens (they're rebuilt from history on reopen). (#38)
 
+### Fixed
+- **A scope/region field with spaces no longer silently kills scoped floods.** A scope holds a *single* region
+  name; pasting a multi-region `region def` list (e.g. `west pnw or wv eug`) hashed the whole string into a
+  transport key that matched no repeater, so hashtag/private-channel traffic was dropped while Public kept
+  working. The config tool now rejects a scope containing a space, and the firmware keeps only the first token
+  (with a serial note) across every input path — `config.json`, the companion set-scope command, and the
+  on-device scope editor. (#36)
+
 ## [0.4.1] — 2026-06-25
 
 ### Added
