@@ -2,7 +2,10 @@
   <img src="docs/images/mclite-banner.png" alt="MCLite — Off-grid messaging, made simple" width="100%">
 </p>
 
-# MCLite for T-Deck Plus & T-Watch Ultra
+> **Fork of [MCLite](https://github.com/laserir/MCLite) by PA3RPW** with custom changes for personal use.
+
+
+# MCLite-RPW for T-Deck Plus
 
 Lightweight off-grid communicator firmware for the LilyGo T-Deck Plus and T-Watch Ultra. Built on [MeshCore](https://github.com/ripplebiz/MeshCore), MCLite is purpose-built for emergency and outdoor communication -- no internet, no cell towers, no training needed. Turn it on and communicate.
 
@@ -15,6 +18,7 @@ Most features below are optional. The primary goal is to keep things extremely s
   &nbsp;
   <a href="https://laserir.github.io/MCLite/tools/config-tool/mclite_config_tool.html"><img src="docs/images/btn-config.svg" alt="Open Config Tool" height="48"></a>
 </p>
+
 
 <table align="center">
   <tr>
@@ -34,6 +38,7 @@ Most features below are optional. The primary goal is to keep things extremely s
 <p align="center">
 <img src="docs/images/twatchultra.jpg" width="810" alt="MCLite running on three T-Watch Ultra devices">
 </p>
+
 
 ## Supported hardware
 
@@ -458,6 +463,17 @@ All devices in your group must use the same radio settings. Compatible with both
 
 > **Disclaimer**: MCLite is experimental open-source software, not a certified radio product. The firmware-level duty cycle cap is provided as a best-effort aid, not a guarantee of regulatory compliance. The operator is solely responsible for ensuring that their complete setup (firmware, hardware, antenna, configuration) complies with all applicable local laws and regulations. The authors accept no liability for non-compliance or any consequences arising from the use of this software.
 
+## Changes from upstream
+
+This fork includes the following modifications on top of the upstream MCLite:
+
+- **Hamburger menu button in status bar** -- quick access to admin/settings from any screen via a persistent menu button
+- **Screen-off on key lock** -- display turns off when the device is locked and wakes only on key press
+- **WiFi/BLE config persistence** -- WiFi and Bluetooth companion settings survive reboots (previously lost after power cycle)
+- **Mesh radio region/scope persistence** -- radio region and scope settings are saved to config and properly applied at boot instead of being overwritten by defaults
+
+All upstream features remain available. These changes are tailored for personal use on the T-Deck Plus hardware.
+
 ## License
 
 MCLite firmware is released under the **MIT License**. See [LICENSE](LICENSE) for details.
@@ -466,7 +482,7 @@ It builds on several open-source libraries and assets (MeshCore, LVGL, LovyanGFX
 
 ## Contributing
 
-Contributions are welcome. Please open an issue or pull request on GitHub.
+Contributions are welcome. Please open an issue or merge request on GitLab.
 
 ## Embed on your site
 
@@ -479,8 +495,9 @@ Help spread MCLite by linking to it from your own page. Drop one of these snippe
   &nbsp;
   <a href="https://laserir.github.io/MCLite/tools/config-tool/mclite_config_tool.html#preset="><img src="docs/images/btn-group-preset.svg" alt="Open MCLite Group Preset" height="48"></a>
   &nbsp;
-  <a href="https://github.com/laserir/MCLite"><img src="docs/images/btn-github.svg" alt="View MCLite on GitHub" height="48"></a>
+  <a href="https://gitlab.waarland.it/Workers_bot/MCLite"><img src="docs/images/btn-github.svg" alt="View MCLite-RPW on GitLab" height="48"></a>
 </p>
+
 
 ```html
 <!-- Flash button -->
@@ -494,8 +511,8 @@ Help spread MCLite by linking to it from your own page. Drop one of these snippe
 </a>
 
 <!-- GitHub button -->
-<a href="https://github.com/laserir/MCLite">
-  <img src="https://raw.githubusercontent.com/laserir/MCLite/main/docs/images/btn-github.svg" alt="View MCLite on GitHub" height="48">
+<a href="https://gitlab.waarland.it/Workers_bot/MCLite">
+  <img src="https://raw.githubusercontent.com/laserir/MCLite/main/docs/images/btn-github.svg" alt="View MCLite-RPW on GitLab" height="48">
 </a>
 ```
 
