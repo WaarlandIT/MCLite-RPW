@@ -147,6 +147,10 @@ struct DebugConfig {
     bool screenshots = false;    // Enable save-screen-to-SD (/screenshots/*.bmp). Debug aid, default off.
 };
 
+struct CompanionConfig {
+    String mode = "off";  // "off", "wifi", "ble", "usb" (mutually exclusive)
+};
+
 struct AppConfig {
     String          deviceName;
     String          language;    // "" = English, "de" = German, etc.
@@ -172,6 +176,7 @@ struct AppConfig {
     OffgridConfig   offgrid;
     WiFiConfig      wifi;
     BleConfig       ble;
+    CompanionConfig companion;
     DebugConfig     debug;
 };
 

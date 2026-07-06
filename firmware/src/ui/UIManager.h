@@ -205,6 +205,7 @@ private:
 
     // Key lock state
     bool       _keyLocked = false;
+    bool       _keyLockDimmed = false;  // Display set to brightness 0 due to key lock
     bool       _keyLockActioned = false; // Already triggered lock/unlock for current hold
     lv_obj_t*  _keyLockOverlay = nullptr;
     void showKeyLockOverlay();

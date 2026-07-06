@@ -83,6 +83,7 @@ void ConfigManager::applyDefaults() {
     _config.permissions.conversationManagement = defaults::PERM_CONVERSATION_MGMT;
     _config.permissions.companion             = defaults::PERM_COMPANION;
     _config.debug.screenshots     = defaults::SCREENSHOTS_ENABLED;
+    _config.companion.mode = defaults::COMPANION_MODE;
     _config.language = defaults::LANGUAGE;
 }
 
@@ -401,6 +402,12 @@ bool ConfigManager::parseJson(const String& json) {
     _config.debug.screenshots = doc["debug"]["screenshots"] | defaults::SCREENSHOTS_ENABLED;
     _config.debug.showMemory  = doc["debug"]["show_memory"]  | false;
 
+    // Companion mode (mutually exclusive)
+    _config.companion.mode = doc["companion"]["mode"] | defaults::COMPANION_MODE;
+    if (_config.companion.mode != "off" && _config.companion.mode != "wifi" &&
+        _config.companion.mode != "ble" && _config.companion.mode != "usb")
+        _config.companion.mode = defaults::COMPANION_MODE;
+
     LOGF("[Config] Loaded: device=%s, contacts=%d, channels=%d\n",
                   _config.deviceName.c_str(),
                   _config.contacts.size(),
@@ -423,15 +430,9 @@ String ConfigManager::toJson() const {
     radio["bandwidth"]        = _config.radio.bandwidth;
     radio["tx_power"]         = _config.radio.txPower;
     radio["coding_rate"]      = _config.radio.codingRate;
-    if (_config.radio.scope != "*") {
-        radio["scope"]        = _config.radio.scope;
-    }
-    if (_config.radio.pathHashMode != defaults::RADIO_PATH_HASH_MODE) {
-        radio["path_hash_mode"] = _config.radio.pathHashMode;
-    }
-    if (_config.radio.advertIntervalMin != 0) {
-        radio["advert_interval_min"] = _config.radio.advertIntervalMin;
-    }
+    radio["scope"]        = _config.radio.scope;
+    radio["path_hash_mode"] = _config.radio.pathHashMode;
+    radio["advert_interval_min"] = _config.radio.advertIntervalMin;
 
     doc["identity"]["private_key"] = _config.privateKey;
     doc["identity"]["public_key"]  = _config.publicKey;
@@ -572,6 +573,11 @@ String ConfigManager::toJson() const {
     }
     if (_config.debug.showMemory) {
         doc["debug"]["show_memory"] = _config.debug.showMemory;
+    }
+
+    // Companion mode — only emit when not "off" (keeps file clean)
+    if (_config.companion.mode != defaults::COMPANION_MODE) {
+        doc["companion"]["mode"] = _config.companion.mode;
     }
 
     String output;

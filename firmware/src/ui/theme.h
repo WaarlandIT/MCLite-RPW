@@ -40,29 +40,30 @@ struct Palette {
     lv_color_t scrim, text_on_accent;
 };
 
-// DARK — the original values; appearance unchanged from the pre-theme build.
+// DARK — meshcore-tdeck-inspired: pure black background, pure white text,
+// chunky full-saturation ST77XX accent colors throughout.
 constexpr Palette PALETTE_DARK = {
-    LV_COLOR_MAKE(0x1A, 0x1A, 0x2E),  // bg_primary       deep navy
-    LV_COLOR_MAKE(0x16, 0x21, 0x3E),  // bg_secondary
-    LV_COLOR_MAKE(0x0F, 0x0F, 0x1A),  // bg_status_bar    darkest
-    LV_COLOR_MAKE(0x22, 0x22, 0x3A),  // bg_input
-    LV_COLOR_MAKE(0xE8, 0xE8, 0xF0),  // text_primary     bright white
-    LV_COLOR_MAKE(0x88, 0x88, 0xAA),  // text_secondary   muted
-    LV_COLOR_MAKE(0x66, 0x66, 0x88),  // text_timestamp   dim
-    LV_COLOR_MAKE(0x00, 0x5A, 0xD4),  // bubble_self      blue (outgoing)
-    LV_COLOR_MAKE(0x99, 0xBB, 0xEE),  // bubble_self_meta light blue
-    LV_COLOR_MAKE(0x2A, 0x2A, 0x45),  // bubble_them      dark gray (incoming)
-    LV_COLOR_MAKE(0xE8, 0xE8, 0xF0),  // bubble_self_text == text_primary (dark)
-    LV_COLOR_MAKE(0x00, 0x7A, 0xFF),  // accent           bright blue
-    LV_COLOR_MAKE(0x00, 0xCC, 0x66),  // unread_dot       green
-    LV_COLOR_MAKE(0x00, 0xCC, 0x66),  // online_dot       green
-    LV_COLOR_MAKE(0xFF, 0x44, 0x44),  // battery_low      red
-    LV_COLOR_MAKE(0x00, 0xCC, 0x66),  // battery_ok       green
-    LV_COLOR_MAKE(0xFF, 0xAA, 0x00),  // gps_last_known   amber
-    LV_COLOR_MAKE(0xFF, 0x8C, 0x00),  // offgrid_accent   warm orange
-    LV_COLOR_MAKE(0xA2, 0x59, 0xFF),  // room_accent      purple
-    LV_COLOR_MAKE(0x00, 0x00, 0x00),  // scrim            modal backdrop (black)
-    LV_COLOR_MAKE(0xFF, 0xFF, 0xFF),  // text_on_accent   white
+    LV_COLOR_MAKE(0x00, 0x00, 0x00),  // bg_primary       pure black
+    LV_COLOR_MAKE(0x11, 0x11, 0x11),  // bg_secondary      very dark
+    LV_COLOR_MAKE(0x00, 0x00, 0x00),  // bg_status_bar     pure black
+    LV_COLOR_MAKE(0x1A, 0x1A, 0x1A),  // bg_input          dark
+    LV_COLOR_MAKE(0xFF, 0xFF, 0xFF),  // text_primary      pure white
+    LV_COLOR_MAKE(0xAA, 0xAA, 0xAA),  // text_secondary    light gray
+    LV_COLOR_MAKE(0x66, 0x66, 0x66),  // text_timestamp    mid gray
+    LV_COLOR_MAKE(0x00, 0x00, 0xFF),  // bubble_self       pure blue (outgoing)
+    LV_COLOR_MAKE(0xAA, 0xDD, 0xFF),  // bubble_self_meta  light blue
+    LV_COLOR_MAKE(0x22, 0x22, 0x22),  // bubble_them       dark gray (incoming)
+    LV_COLOR_MAKE(0xFF, 0xFF, 0xFF),  // bubble_self_text  pure white on blue
+    LV_COLOR_MAKE(0x55, 0x55, 0xFF),  // accent            bright blue
+    LV_COLOR_MAKE(0x00, 0xFF, 0x00),  // unread_dot        pure green
+    LV_COLOR_MAKE(0x00, 0xFF, 0x00),  // online_dot        pure green
+    LV_COLOR_MAKE(0xFF, 0x00, 0x00),  // battery_low       pure red
+    LV_COLOR_MAKE(0x00, 0xFF, 0x00),  // battery_ok        pure green
+    LV_COLOR_MAKE(0xFF, 0xFF, 0x00),  // gps_last_known    pure yellow
+    LV_COLOR_MAKE(0xFF, 0x8C, 0x00),  // offgrid_accent    orange
+    LV_COLOR_MAKE(0x00, 0x00, 0xFF),  // room_accent       pure blue
+    LV_COLOR_MAKE(0x00, 0x00, 0x00),  // scrim             pure black
+    LV_COLOR_MAKE(0xFF, 0xFF, 0xFF),  // text_on_accent    pure white
 };
 
 // LIGHT — bright surfaces, dark text; for daylight / indoor use.

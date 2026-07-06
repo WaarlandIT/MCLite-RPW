@@ -202,10 +202,20 @@ void UIManager::update() {
                 // Fallback: PIN auto-lock requested but only key lock available
                 _keyLocked = true;
                 showKeyLockOverlay();
+                Display::instance().setBrightness(0);
+                if (cfg.display.kbdBacklight) {
+                    IInput::instance().setBacklight(0);
+                }
+                _keyLockDimmed = true;
                 LOGLN("[UI] Key lock engaged (auto-dim, pin fallback)");
             } else if (sec.autoLock == "key" && (sec.lockMode == "key" || sec.lockMode == "pin") && !_isLocked && !_keyLocked) {
                 _keyLocked = true;
                 showKeyLockOverlay();
+                Display::instance().setBrightness(0);
+                if (cfg.display.kbdBacklight) {
+                    IInput::instance().setBacklight(0);
+                }
+                _keyLockDimmed = true;
                 LOGLN("[UI] Key lock engaged (auto-dim)");
             }
         }
@@ -290,6 +300,23 @@ void UIManager::checkWake() {
     // Any input resets the dim timer
     _lastActivity = millis();
 
+    // Wake from key-lock dim first (brightness 0 → full brightness).
+    // The key lock itself stays engaged; user sees the overlay.
+    if (_keyLocked && _keyLockDimmed) {
+        const auto& dispCfg = ConfigManager::instance().config().display;
+        Display::instance().setBrightness(dispCfg.brightness);
+        if (dispCfg.kbdBacklight) {
+            IInput::instance().setBacklight(dispCfg.kbdBrightness);
+        }
+        _keyLockDimmed = false;
+        _dimmed = false;  // Also clear dimmed if it was set alongside key lock
+        // Consume the keyboard wake key so it doesn't pass through
+        if (IInput::instance().pollKey() != 0) {
+            IInput::instance().clearKey();
+        }
+        return;  // Don't re-trigger dimmed wake below
+    }
+
     // Wake display if dimmed
     if (_dimmed) {
         const auto& dispCfg = ConfigManager::instance().config().display;
@@ -359,8 +386,8 @@ void UIManager::showScreen(Screen screen) {
     _currentScreen = screen;
     _lastActivity = millis();
 
-    // Wake display if dimmed
-    if (_dimmed) {
+    // Wake display if dimmed (but not from key-lock dim)
+    if (!_keyLocked && _dimmed) {
         const auto& dispCfg = ConfigManager::instance().config().display;
         Display::instance().setBrightness(dispCfg.brightness);
         if (dispCfg.kbdBacklight) {
@@ -477,7 +504,8 @@ void UIManager::onIncomingMessage(const ConvoId& id, const Message& msg) {
     }
 
     // Wake display (skip for muted chats unless it's an SOS)
-    if (!chatMuted || isSos) {
+    // Do NOT wake from key-lock dim — overlay only disappears on key press.
+    if (!_keyLocked && (!chatMuted || isSos)) {
         if (_dimmed) {
             const auto& dispCfg = ConfigManager::instance().config().display;
             Display::instance().setBrightness(dispCfg.brightness);
@@ -1978,11 +2006,24 @@ void UIManager::engageKeyLock() {
     if (_keyLocked || _isLocked) return;  // Already locked or PIN-locked
     _keyLocked = true;
     showKeyLockOverlay();
+    // Darken display to save power while locked
+    Display::instance().setBrightness(0);
+    if (ConfigManager::instance().config().display.kbdBacklight) {
+        IInput::instance().setBacklight(0);
+    }
+    _keyLockDimmed = true;
     LOGLN("[UI] Key lock engaged");
 }
 
 void UIManager::disengageKeyLock() {
     if (!_keyLocked) return;
+    // Restore display brightness
+    const auto& dispCfg = ConfigManager::instance().config().display;
+    Display::instance().setBrightness(dispCfg.brightness);
+    if (dispCfg.kbdBacklight) {
+        IInput::instance().setBacklight(dispCfg.kbdBrightness);
+    }
+    _keyLockDimmed = false;
     _keyLocked = false;
     hideKeyLockOverlay();
     LOGLN("[UI] Key lock disengaged");

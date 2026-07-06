@@ -1,6 +1,6 @@
 #pragma once
 
-// MCLite default configuration values
+// MCLite-RPW default configuration values
 
 // All three are #ifndef-guarded so a fork can override them with -D build flags
 // (e.g. -DMCLITE_REPO_OWNER=\"someone\") to self-update from its own GitHub repo.
@@ -8,10 +8,10 @@
 #define MCLITE_VERSION "0.4.1"
 #endif
 #ifndef MCLITE_REPO_OWNER
-#define MCLITE_REPO_OWNER "laserir"   // GitHub owner for OTA update checks
+#define MCLITE_REPO_OWNER "Workers_bot"   // GitLab owner for OTA update checks
 #endif
 #ifndef MCLITE_REPO_NAME
-#define MCLITE_REPO_NAME "MCLite"     // GitHub repo for OTA update checks
+#define MCLITE_REPO_NAME "MCLite-RPW"     // GitLab repo for OTA update checks
 #endif
 
 namespace mclite {
@@ -29,7 +29,7 @@ constexpr const char* FIRMWARE_VENDOR  = MCLITE_REPO_OWNER "/" MCLITE_REPO_NAME;
 constexpr uint16_t LANG_VERSION = 43;   // 0.4.x: + lbl_show_memory
 
 // Device
-constexpr const char* DEVICE_NAME = "MCLite";
+constexpr const char* DEVICE_NAME = "MCLite-RPW";
 
 // Radio (LoRa) — defaults match EU/UK/CH preset
 constexpr float    RADIO_FREQUENCY       = 869.618f;
@@ -108,6 +108,8 @@ constexpr const char* PIN_CODE           = "";
 constexpr const char* AUTO_LOCK          = "key";   // "none", "key", "pin"
 constexpr bool     ADMIN_ENABLED         = true;
 constexpr bool     SCREENSHOTS_ENABLED   = false;  // debug.screenshots — save-screen-to-SD, off by default
+// Companion (mutually exclusive): "off", "wifi", "ble", "usb"
+constexpr const char* COMPANION_MODE = "off";
 
 // Permissions (within the Admin gate). admin_enabled stays the global on/off.
 constexpr const char* PERM_SETTINGS      = "full";  // "full" | "restricted" | "none"

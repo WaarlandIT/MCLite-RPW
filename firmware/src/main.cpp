@@ -54,7 +54,7 @@ static void updateCompanion();
 void setup() {
     Serial.begin(115200);
     delay(500);
-    LOGF("\n=== MCLite v%s ===\n", MCLITE_VERSION);
+    LOGF("\n=== MCLite-RPW v%s ===\n", MCLITE_VERSION);
 
     // Enable board power
 #ifdef PLATFORM_TDECK
@@ -111,6 +111,16 @@ void setup() {
     // Apply config-dependent settings
     const auto& cfg = ConfigManager::instance().config();
     Display::instance().setBrightness(cfg.display.brightness);
+
+    // Restore companion mode from config (wifi/ble/usb/off)
+    {
+        auto& comp = CompanionService::instance();
+        const String& companionMode = cfg.companion.mode;
+        if (companionMode == "wifi")      comp.setWifiCompanionEnabled(true);
+        else if (companionMode == "ble")  comp.setBleCompanionEnabled(true);
+        else if (companionMode == "usb")  comp.setUsbCompanionEnabled(true);
+        // "off" — leave all at their default (false)
+    }
 
     // Apply timezone for auto-DST (before UI init)
     mclite::TimeHelper::instance().applyTimezone();
@@ -197,11 +207,11 @@ void setup() {
         MeshManager::instance().init();
         setupMeshCallbacks();
 
-        // If device name is still default "MCLite" and we have a public key,
+        // If device name is still default "MCLite-RPW" and we have a public key,
         // set dynamic name: "MCLite-" + first 8 hex chars of public key
         auto& cfgMut = ConfigManager::instance().config();
         if (cfgMut.deviceName == defaults::DEVICE_NAME && cfgMut.publicKey.length() >= 8) {
-            cfgMut.deviceName = String("MCLite-") + cfgMut.publicKey.substring(0, 8);
+            cfgMut.deviceName = String("MCLite-RPW-") + cfgMut.publicKey.substring(0, 8);
             ConfigManager::instance().save();
             LOGF("[Boot] Device name set to: %s\n", cfgMut.deviceName.c_str());
         }

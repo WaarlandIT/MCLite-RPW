@@ -133,7 +133,17 @@ void StatusBar::create(lv_obj_t* parent) {
     lv_obj_set_flex_align(_bar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_column(_bar, theme::PAD_SMALL, 0);
 
-    // OFFGRID indicator — created FIRST so flex order places it leftmost.
+    // Menu button — created FIRST so flex order places it leftmost.
+    // Shows a hamburger icon; clicking opens the admin navigation screen.
+    _menuBtn = lv_label_create(_bar);
+    lv_obj_set_style_text_font(_menuBtn, FONT_HEADING, 0);
+    lv_obj_set_style_text_color(_menuBtn, theme::ACCENT(), 0);
+    lv_label_set_text(_menuBtn, LV_SYMBOL_LIST);
+    lv_obj_add_flag(_menuBtn, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_ext_click_area(_menuBtn, 4);
+    lv_obj_add_event_cb(_menuBtn, menuClickCb, LV_EVENT_CLICKED, nullptr);
+
+    // OFFGRID indicator — comes after menu button.
     // Hidden by default; update() toggles visibility from cfg.offgrid.enabled.
     _lblOffgrid = lv_label_create(_bar);
     lv_label_set_text(_lblOffgrid, "OFFGRID");
@@ -212,6 +222,17 @@ void StatusBar::soundClickCb(lv_event_t* e) {
 
 void StatusBar::gpsClickCb(lv_event_t* e) {
     UIManager::instance().showGeneralMap();
+}
+
+void StatusBar::menuClickCb(lv_event_t* e) {
+    UIManager& ui = UIManager::instance();
+    // Toggle: if already on admin, go home; otherwise open Admin (the nav hub).
+    // On T-Deck, Admin serves as the menu with links to all screens.
+    if (ui.currentScreen() == Screen::ADMIN) {
+        ui.goHome();
+    } else {
+        ui.showScreen(Screen::ADMIN);
+    }
 }
 
 void StatusBar::updateSoundIcon() {

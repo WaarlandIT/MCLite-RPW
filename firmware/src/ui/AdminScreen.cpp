@@ -3,6 +3,7 @@
 #include "UIManager.h"
 #include "theme.h"
 #include "../config/ConfigManager.h"
+#include "../config/defaults.h"
 #include "../hal/Display.h"
 #include "../i18n/I18n.h"
 
@@ -139,7 +140,18 @@ void AdminScreen::show() {
     addLink(LV_SYMBOL_SETTINGS, t("sec_battery"),   [](lv_event_t*) { UIManager::instance().showSettings(SettingsSection::Battery); });
     addLink(LV_SYMBOL_SETTINGS, t("sec_security"),  [](lv_event_t*) { UIManager::instance().showSettings(SettingsSection::Security); });
 
-    // ─── About: 3rd-party licenses (expandable; lives on the hub, not in Device) ───
+    // ─── About: fork info (always visible) ───
+    addHeader("About");
+    {
+        lv_obj_t* aboutLabel = lv_label_create(_content);
+        lv_obj_set_style_text_font(aboutLabel, FONT_BODY, 0);
+        lv_obj_set_style_text_color(aboutLabel, theme::TEXT_PRIMARY(), 0);
+        lv_obj_set_width(aboutLabel, LV_PCT(100));
+        lv_label_set_long_mode(aboutLabel, LV_LABEL_LONG_WRAP);
+        lv_label_set_text(aboutLabel, (String("MCLite-RPW v") + defaults::FIRMWARE_VERSION + "\nA fork of MCLite with changes by PA3RPW").c_str());
+    }
+
+    // ─── Licenses: 3rd-party licenses (expandable; lives on the hub, not in Device) ───
     addHeader(t("sec_licenses"));
     {
         lv_obj_t* licToggle = lv_label_create(_content);

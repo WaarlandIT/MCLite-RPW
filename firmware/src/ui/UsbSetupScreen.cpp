@@ -6,6 +6,7 @@
 #include "../hal/IInput.h"
 #include "../i18n/I18n.h"
 #include "../companion/CompanionService.h"
+#include "../config/ConfigManager.h"
 
 namespace mclite {
 
@@ -148,6 +149,12 @@ void UsbSetupScreen::switchCb(lv_event_t* e) {
     if (!self) return;
     bool on = lv_obj_has_state(self->_switch, LV_STATE_CHECKED);
     CompanionService::instance().setUsbCompanionEnabled(on);  // mutually exclusive with WiFi companion
+    // Persist companion mode to config so it survives a reboot
+    {
+        auto& cfg = ConfigManager::instance().config();
+        cfg.companion.mode = on ? "usb" : "off";
+        ConfigManager::instance().save();
+    }
     self->updateUi();
 }
 

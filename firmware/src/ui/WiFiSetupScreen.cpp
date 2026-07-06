@@ -538,6 +538,12 @@ void WiFiSetupScreen::companionSwitchCb(lv_event_t* e) {
     }
     bool on = lv_obj_has_state(self->_companionSwitch, LV_STATE_CHECKED);
     CompanionService::instance().setWifiCompanionEnabled(on);  // main loop starts/stops it
+    // Persist companion mode to config so it survives a reboot
+    {
+        auto& cfg = ConfigManager::instance().config();
+        cfg.companion.mode = on ? "wifi" : "off";
+        ConfigManager::instance().save();
+    }
     self->updateStatusUi();
 }
 

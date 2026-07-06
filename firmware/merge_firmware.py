@@ -22,8 +22,8 @@ import glob
 # Map PIO env name → output binary name prefix.
 # Must match the web flasher's TARGETS[*].binaryPattern regexes.
 ENV_TO_BIN_PREFIX = {
-    "tdeck_plus":   "mclite",
-    "twatch_ultra": "mclite-watch",
+    "tdeck_plus":   "mclite-rpw",
+    "twatch_ultra": "mclite-watch-rpw",
 }
 
 

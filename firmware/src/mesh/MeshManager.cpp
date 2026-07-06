@@ -267,6 +267,21 @@ bool MeshManager::init() {
         return false;
     }
 
+    // Mesh::begin() may re-initialize the radio with compile-time defaults.
+    // Re-apply the user's saved radio parameters from config so region/SF/BW/CR
+    // settings persist across reboots.
+    {
+        const auto& rcfg = ConfigManager::instance().config().radio;
+        radio.setFrequency(cfg.offgrid.enabled
+            ? MCLiteMesh::offgridFreqFor(rcfg.frequency)
+            : rcfg.frequency);
+        radio.setSpreadingFactor(rcfg.spreadingFactor);
+        radio.setPreambleLength(rcfg.spreadingFactor <= 8 ? 32 : 16);
+        radio.setBandwidth(rcfg.bandwidth);
+        radio.setCodingRate(rcfg.codingRate);
+        radio.setOutputPower(rcfg.txPower);
+    }
+
     LOGLN("[Mesh] Initialization complete");
     return true;
 }
