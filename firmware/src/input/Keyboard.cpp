@@ -41,6 +41,10 @@ char Keyboard::readI2C() {
     return 0;
 }
 
+// Repeat delay + rate (milliseconds)
+static constexpr uint32_t REPEAT_DELAY = 400;   // hold this long before repeat starts
+static constexpr uint32_t REPEAT_RATE  = 80;    // then repeat every 80ms
+
 void Keyboard::readCb(lv_indev_drv_t* drv, lv_indev_data_t* data) {
     Keyboard* self = (Keyboard*)drv->user_data;
     char c = self->readI2C();
@@ -50,11 +54,38 @@ void Keyboard::readCb(lv_indev_drv_t* drv, lv_indev_data_t* data) {
 
         // Key-locked: suppress LVGL keyboard input
         if (UIManager::instance().isKeyLocked()) {
+            self->_repeatChar = 0;
             data->state = LV_INDEV_STATE_RELEASED;
             return;
         }
 
-        data->state = LV_INDEV_STATE_PRESSED;
+        uint32_t now = millis();
+
+        // If same key as last call, manage repeat
+        if (c == self->_repeatChar) {
+            uint32_t elapsed = now - self->_repeatStarted;
+            if (self->_repeatFired) {
+                // Already repeating — check rate interval
+                if (elapsed % REPEAT_RATE < 20) {
+                    data->state = LV_INDEV_STATE_PRESSED;
+                } else {
+                    data->state = LV_INDEV_STATE_RELEASED;
+                }
+            } else if (elapsed >= REPEAT_DELAY) {
+                // Initial delay passed — start repeating
+                self->_repeatFired = true;
+                data->state = LV_INDEV_STATE_PRESSED;
+            } else {
+                // Still within initial delay — key stays released
+                data->state = LV_INDEV_STATE_RELEASED;
+            }
+        } else {
+            // New or different key — start fresh
+            self->_repeatChar = c;
+            self->_repeatStarted = now;
+            self->_repeatFired = false;
+            data->state = LV_INDEV_STATE_PRESSED;
+        }
 
         // Map special keys to LVGL key codes
         switch (c) {
@@ -85,6 +116,10 @@ void Keyboard::readCb(lv_indev_drv_t* drv, lv_indev_data_t* data) {
                 break;
         }
     } else {
+        // No key pressed — reset repeat state
+        self->_repeatChar = 0;
+        self->_repeatStarted = 0;
+        self->_repeatFired = false;
         data->state = LV_INDEV_STATE_RELEASED;
     }
 }

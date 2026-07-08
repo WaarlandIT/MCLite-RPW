@@ -121,6 +121,7 @@ void AdminScreen::show() {
         addLink(LV_SYMBOL_WIFI,      t("wifi_companion"), [](lv_event_t*) { UIManager::instance().showScreen(Screen::WIFI_SETUP); });
         addLink(LV_SYMBOL_USB,       t("usb_companion"),  [](lv_event_t*) { UIManager::instance().showScreen(Screen::USB_SETUP); });
         addLink(LV_SYMBOL_BLUETOOTH, t("ble_companion"),  [](lv_event_t*) { UIManager::instance().showScreen(Screen::BLE_SETUP); });
+        addLink(LV_SYMBOL_EDIT,      "Console",           [](lv_event_t*) { UIManager::instance().showScreen(Screen::CONSOLE); });
     }
 
     // ─── Conversations (read-only views on device; icons mirror the convo list) ───

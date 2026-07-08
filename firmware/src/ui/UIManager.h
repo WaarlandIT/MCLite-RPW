@@ -10,6 +10,7 @@
 #include "WiFiSetupScreen.h"
 #include "UsbSetupScreen.h"
 #include "BleSetupScreen.h"
+#include "ConsoleScreen.h"
 #include "MapScreen.h"
 #include "../storage/MessageStore.h"
 
@@ -23,7 +24,8 @@ enum class Screen {
     HEARD_ADVERTS,
     WIFI_SETUP,
     USB_SETUP,
-    BLE_SETUP
+    BLE_SETUP,
+    CONSOLE
 };
 
 class UIManager {
@@ -155,6 +157,7 @@ private:
     WiFiSetupScreen     _wifiSetupScreen;
     UsbSetupScreen      _usbSetupScreen;
     BleSetupScreen      _bleSetupScreen;
+    ConsoleScreen       _consoleScreen;
 
     lv_obj_t*  _mainScreen = nullptr;
     lv_group_t* _inputGroup = nullptr;

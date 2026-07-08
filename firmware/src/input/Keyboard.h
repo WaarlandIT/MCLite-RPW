@@ -27,6 +27,10 @@ private:
     lv_indev_t* _indev = nullptr;
     lv_indev_drv_t _drv;
 
+    char _repeatChar = 0;        // character currently repeating
+    uint32_t _repeatStarted = 0; // millis() when repeat began
+    bool _repeatFired = false;   // true after initial delay
+
     static void readCb(lv_indev_drv_t* drv, lv_indev_data_t* data);
     char readI2C();
 };

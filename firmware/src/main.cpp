@@ -45,6 +45,9 @@ static bool g_companionUsbStarted = false;
 static SerialBLEInterface g_companionBle;
 static bool g_companionBleStarted = false;
 static char g_bleName[24];   // mutable name buffer for SerialBLEInterface::begin
+static bool g_bleClientEverConnected = false;
+static uint32_t g_bleDisconnectedSince = 0;  // millis() when BLE client last disconnected
+static constexpr uint32_t BLE_AUTO_OFF_TIMEOUT = 30UL * 60UL * 1000UL;  // 30 minutes
 
 // Forward declarations
 static void setupMeshCallbacks();
@@ -305,6 +308,27 @@ static void updateCompanion() {
         desired = &g_companionUsb;
         usbActive = true;
     } else if (comp.bleCompanionEnabled()) {
+        // Detect first-ever BLE client connect.
+        if (!g_bleClientEverConnected && g_companionBle.isConnected()) {
+            g_bleClientEverConnected = true;
+        }
+
+        // Auto-disable BLE when no client has connected for 30 minutes.
+        if (g_bleClientEverConnected) {
+            if (g_companionBle.isConnected()) {
+                g_bleDisconnectedSince = 0;
+            } else if (g_bleDisconnectedSince == 0) {
+                g_bleDisconnectedSince = millis();
+            } else if (millis() - g_bleDisconnectedSince >= BLE_AUTO_OFF_TIMEOUT) {
+                LOGLN("[Companion] BLE idle 30 min — disabling");
+                comp.setBleCompanionEnabled(false);
+                g_bleClientEverConnected = false;
+                g_bleDisconnectedSince = 0;
+                g_companionBle.disable();
+                g_companionBleStarted = false;
+                desired = nullptr;
+            }
+        }
         if (!g_companionBleStarted) {
             // BLE + WiFi can't share the radio/RAM. Fully tear WiFi down and give
             // the driver time to actually release its memory before BLEDevice::init

@@ -62,6 +62,7 @@ bool UIManager::init() {
     _wifiSetupScreen.create(_mainScreen);
     _usbSetupScreen.create(_mainScreen);
     _bleSetupScreen.create(_mainScreen);
+    _consoleScreen.create(_mainScreen);
 
     // Wire up callbacks
     _convoList.onSelect([this](const ConvoId& id) {
@@ -258,6 +259,7 @@ void UIManager::update() {
     _wifiSetupScreen.tick();
     _usbSetupScreen.tick();
     _bleSetupScreen.tick();
+    _consoleScreen.tick();
 
     // Room login tick (boot path with backoff). No-op for already-logged-in rooms.
     roomLoginTick();
@@ -355,6 +357,7 @@ void UIManager::showScreen(Screen screen) {
     _wifiSetupScreen.hide();
     _usbSetupScreen.hide();
     _bleSetupScreen.hide();
+    _consoleScreen.hide();
 
     switch (screen) {
         case Screen::CONVO_LIST:
@@ -381,6 +384,9 @@ void UIManager::showScreen(Screen screen) {
             break;
         case Screen::BLE_SETUP:
             _bleSetupScreen.show();
+            break;
+        case Screen::CONSOLE:
+            _consoleScreen.show();
             break;
     }
     _currentScreen = screen;
